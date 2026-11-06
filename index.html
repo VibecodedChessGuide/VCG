@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Chess Coach</title>
-<meta name="description" content="Play Stockfish, get move-by-move coaching, review your games and explore openings. Runs fully in your browser.">
+<title>Chess Analysis</title>
+<meta name="description" content="Play Stockfish, get move-by-move analysis, review your games and explore openings. Runs fully in your browser.">
 <meta name="theme-color" content="#312e2b">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%23739552'/%3E%3Ctext x='50' y='72' font-size='64' text-anchor='middle' fill='%23fff'%3E%E2%99%9E%3C/text%3E%3C/svg%3E">
 <link rel="preload" href="assets/boards/green.png" as="image">
@@ -248,7 +248,7 @@ button.ghost{background:transparent;border:1px solid var(--line);color:var(--ink
 <body>
 <div class="wrap">
   <div class="top">
-    <h1>Chess Coach</h1>
+    <h1>Chess Analysis</h1>
     <div class="tabs">
       <button id="tabPlay" class="on">Play</button>
       <button id="tabReview">Review</button>
@@ -322,7 +322,7 @@ button.ghost{background:transparent;border:1px solid var(--line);color:var(--ink
       <div class="hist" id="phist"></div>
     </div>
 
-    <div class="card c-coach" id="pcoach"><span class="empty">Start a game. After each move you play, the coach tells you what the engine would have done.</span></div>
+    <div class="card c-coach" id="pcoach"><span class="empty">Start a game. After each move you play, the analysis tells you what the engine would have done.</span></div>
 
     <div class="card c-tally">
       <h2>Flaws this game</h2>
@@ -519,7 +519,7 @@ const GLYPH = {p:"\u265F\uFE0E",n:"\u265E\uFE0E",b:"\u265D\uFE0E",r:"\u265C\uFE0
 const NAMES = {p:"pawn",n:"knight",b:"bishop",r:"rook",q:"queen",k:"king"};
 const VAL = {p:1,n:3,b:3,r:5,q:9,k:0};
 const ATT = {p:1,n:3,b:3,r:5,q:9,k:100};
-const FD = 10; // coach search depth
+const FD = 10; // analysis search depth
 const LEVELS = {
   beginner:{skill:0, depth:3}, casual:{skill:6, depth:6},
   strong:{skill:14, depth:10}, max:{skill:20, depth:12}
@@ -602,9 +602,10 @@ function sndKind(m, mine){
 
 /* ================= Engine (worker pool) ================= */
 // One worker boots first so you can play right away. Extra workers start in the background and are
-// used for parallel game review and for computing the engine's reply while the coach checks your move.
+// used for parallel game review and for computing the engine's reply while the analysis checks your move.
 const BIG_BUILD = 50e6; // engines above this size are heavy: cap parallel copies and start helpers lazily
-const maxW = () => Math.max(1, Math.min(BOT().size > BIG_BUILD ? 2 : 4, (navigator.hardwareConcurrency || 2) - 1, (navigator.deviceMemory || 4) < 4 ? 2 : 4));
+let auxOff = false; // set after a worker dies (usually out of memory): stay on a single engine copy
+const maxW = () => auxOff ? 1 : Math.max(1, Math.min(BOT().size > BIG_BUILD ? 2 : 4, (navigator.hardwareConcurrency || 2) - 1, (navigator.deviceMemory || 4) < 4 ? 2 : 4));
 const workerP = [], cache = new Map();
 let engineGen = 0, engineNote = "";
 const booting = new Set();
@@ -663,7 +664,12 @@ function bootWorker(url, onProgress, prog){
       w.postMessage({progressPort: ch.port2}, [ch.port2]);
     }
     arm();
-    w.onmessage = e => { if(String(e.data).includes("uciok")) finish(() => res({w, chain:Promise.resolve(), skill:null})); };
+    w.onmessage = e => {
+      if(!String(e.data).includes("uciok")) return;
+      const wk = {w, chain:Promise.resolve(), skill:null, dead:false, abort:null};
+      w.onerror = w.onmessageerror = () => { wk.dead = true; if(wk.abort) wk.abort(); };
+      finish(() => res(wk));
+    };
     w.onerror = err => { try{ w.terminate(); }catch(e){} finish(() => rej(err)); };
     w.postMessage("uci");
   });
@@ -688,7 +694,7 @@ function getWorker(i){
 }
 // each worker runs one job at a time
 function onW(wk, fn){ const p = wk.chain.then(fn); wk.chain = p.catch(() => {}); return p; }
-const enqueue = fn => onW(main, fn);
+const enqueue = fn => main ? onW(main, fn) : Promise.resolve(null);
 function setSkill(wk, v){ if(wk.skill!==v){ wk.skill = v; wk.w.postMessage("setoption name Skill Level value " + v); } }
 function stopEngine(){
   engineGen++;
@@ -708,7 +714,7 @@ function renderBots(){
 async function selectBot(id){
   const b = BOTS.find(x => x.id === id);
   if(!b || (id === botId && engineReady)) return;
-  botId = id; engineNote = "";
+  botId = id; engineNote = ""; auxOff = false; gameId++;
   renderBots();
   $("esel").textContent = "Selected engine: " + b.name;
   $("plevel").value = b.level;
@@ -724,12 +730,22 @@ async function selectBot(id){
 $("plevel").onchange = () => { BOT().level = $("plevel").value; };
 
 function bootAux(gen){
-  if(maxW() < 2 || aux) return;
+  if(auxOff || maxW() < 2 || aux) return;
   idle(() => getWorker(1).then(w => {
     if(!w) return;
     if(gen === engineGen) aux = w;
     else { try{ w.w.terminate(); }catch(e){} }
   }));
+}
+let recovering = null;
+function recoverEngine(){
+  if(recovering) return recovering;
+  const msg = "The engine stopped responding. Restarting it…";
+  $("pstatus").textContent = msg; $("status").textContent = msg; $("esstatus").textContent = msg;
+  auxOff = true;
+  stopEngine();
+  recovering = startEngine(engineGen).finally(() => { recovering = null; });
+  return recovering;
 }
 async function startEngine(gen){
   gen = gen === undefined ? engineGen : gen;
@@ -754,54 +770,68 @@ async function startEngine(gen){
   }
 }
 
-function analyze(fen, depth, wk){
-  wk = wk || main;
-  const key = fen + "|" + depth, hit = cache.get(key);
-  if(hit) return Promise.resolve(hit);
+// Every search goes through runSearch and can never wait forever. After a soft timeout it asks the
+// engine to stop (which returns the best move found so far). If the engine still stays silent, the
+// worker is marked dead and the job resolves null, so callers can restart the engine instead of hanging.
+const SEARCH_BASE_MS = 20000, SEARCH_PER_DEPTH_MS = 2500, STOP_GRACE_MS = 5000;
+function runSearch(wk, fen, depth, skill, onInfo){
   return new Promise(resolve => {
-    const g = new Chess(fen);
-    if(g.game_over()){
-      let cp = 0, mate = null;
-      if(g.in_checkmate()){ cp = g.turn()==="w" ? -10000 : 10000; mate = cp>0?0.5:-0.5; }
-      return resolve({fen, cp, mate, best:null, pv:[]});
-    }
-    const sign = g.turn()==="w" ? 1 : -1;
-    let cp = 0, mate = null, pv = [];
+    if(!wk || wk.dead) return resolve(null);
+    let done = false, t = 0;
+    const finish = v => { if(done) return; done = true; clearTimeout(t); if(wk.abort === abort) wk.abort = null; resolve(v); };
+    const abort = () => finish(null);
+    wk.abort = abort;
     wk.w.onmessage = e => {
       const l = String(e.data);
-      if(l.startsWith("info") && l.includes(" pv ") && !/bound/.test(l)){
-        const m = l.match(/score (cp|mate) (-?\d+)/);
-        if(m){
-          const v = parseInt(m[2],10) * sign;
-          if(m[1]==="cp"){ cp = v; mate = null; }
-          else { mate = v; cp = (v>0?1:-1) * (10000 - Math.abs(v)*10); }
-        }
-        pv = l.split(" pv ")[1].trim().split(/\s+/);
-      } else if(l.startsWith("bestmove")){
-        const best = l.split(/\s+/)[1];
-        if(!pv.length && best && best!=="(none)") pv = [best];
-        const r = {fen, cp, mate, best: best==="(none)"?null:best, pv};
-        cache.set(key, r);
-        if(cache.size > 800) cache.delete(cache.keys().next().value);
-        resolve(r);
-      }
+      if(l.startsWith("bestmove")) finish({best:l.split(/\s+/)[1]});
+      else if(onInfo) onInfo(l);
     };
-    setSkill(wk, 20);
-    wk.w.postMessage("position fen " + fen);
-    wk.w.postMessage("go depth " + depth);
-  });
-}
-function engineSearch(fen, skill, depth, wk){
-  wk = wk || main;
-  return new Promise(resolve => {
-    wk.w.onmessage = e => {
-      const l = String(e.data);
-      if(l.startsWith("bestmove")) resolve(l.split(/\s+/)[1]);
-    };
+    t = setTimeout(() => {
+      try{ wk.w.postMessage("stop"); }catch(err){}
+      t = setTimeout(() => { wk.dead = true; finish(null); }, STOP_GRACE_MS);
+    }, SEARCH_BASE_MS + depth * SEARCH_PER_DEPTH_MS);
     setSkill(wk, skill);
     wk.w.postMessage("position fen " + fen);
     wk.w.postMessage("go depth " + depth);
   });
+}
+// resolves null when the engine stopped responding
+function analyze(fen, depth, wk){
+  wk = wk || main;
+  const key = fen + "|" + depth, hit = cache.get(key);
+  if(hit) return Promise.resolve(hit);
+  const g = new Chess(fen);
+  if(g.game_over()){
+    let cp = 0, mate = null;
+    if(g.in_checkmate()){ cp = g.turn()==="w" ? -10000 : 10000; mate = cp>0?0.5:-0.5; }
+    return Promise.resolve({fen, cp, mate, best:null, pv:[]});
+  }
+  const sign = g.turn()==="w" ? 1 : -1;
+  let cp = 0, mate = null, pv = [];
+  return runSearch(wk, fen, depth, 20, l => {
+    if(l.startsWith("info") && l.includes(" pv ") && !/bound/.test(l)){
+      const m = l.match(/score (cp|mate) (-?\d+)/);
+      if(m){
+        const v = parseInt(m[2],10) * sign;
+        if(m[1]==="cp"){ cp = v; mate = null; }
+        else { mate = v; cp = (v>0?1:-1) * (10000 - Math.abs(v)*10); }
+      }
+      pv = l.split(" pv ")[1].trim().split(/\s+/);
+    }
+  }).then(res => {
+    if(!res) return null;
+    const best = res.best;
+    if(!pv.length && best && best!=="(none)") pv = [best];
+    const r = {fen, cp, mate, best: (!best || best==="(none)") ? null : best, pv};
+    cache.set(key, r);
+    if(cache.size > 800) cache.delete(cache.keys().next().value);
+    return r;
+  });
+}
+// resolves the best move in UCI form, or null when the engine stopped responding
+async function engineSearch(fen, skill, depth, wk){
+  const r = await runSearch(wk || main, fen, depth, skill);
+  return r ? r.best : null;
 }
 
 /* ================= Helpers ================= */
@@ -1338,7 +1368,8 @@ async function extendPred(ctx, st){
   while(predState[ctx]===st && !st.stopExt && st.steps.length < st.n){
     const last = st.steps[st.steps.length-1];
     if(new Chess(last.fen).game_over()) break;
-    const wk = aux || main;
+    const wk = (aux && !aux.dead) ? aux : main;
+    if(!wk || wk.dead) break;
     const u = await onW(wk, () => engineSearch(last.fen, 20, 8, wk));
     if(predState[ctx]!==st || st.stopExt || !u || u==="(none)") break;
     if(!addStep(st, last.fen, u)) break;
@@ -1737,7 +1768,7 @@ function renderPlay(boardOnly){
   const h = pg.history(); let t = "";
   h.forEach((m,i) => { t += (i%2===0 ? (i/2+1)+". " : "") + m + " "; });
   $("phist").textContent = t;
-  setHTML($("pcoach"), fb ? fb.html + (fb.predOn ? predHtml("play") : "") : `<span class="empty">Your move. The coach will review it once you play.</span>`);
+  setHTML($("pcoach"), fb ? fb.html + (fb.predOn ? predHtml("play") : "") : `<span class="empty">Your move. The analysis will review it once you play.</span>`);
   $("ptake").classList.toggle("hide", !awaiting);
   $("pcont").classList.toggle("hide", !awaiting);
   $("ptoggle").classList.toggle("hide", !!awaiting);
@@ -1777,9 +1808,16 @@ async function engineMove(id){
   const lvl = $("plevel").value, L = LEVELS[lvl], fen = pg.fen();
   let u = (spec && spec.fen===fen && spec.lvl===lvl) ? await spec.p : null;
   spec = null;
-  if(!u) u = await enqueue(() => engineSearch(fen, L.skill, L.depth));
-  if(id!==gameId) return;
-  const m = uciToMove(pg, u);
+  if(id!==gameId || over) return;
+  if(!u || u==="(none)") u = await enqueue(() => engineSearch(fen, L.skill, L.depth));
+  if(!u && (!main || main.dead)){
+    await recoverEngine();
+    if(id!==gameId || over) return;
+    if(engineReady) u = await enqueue(() => engineSearch(fen, L.skill, L.depth));
+  }
+  if(id!==gameId || over) return;
+  let m = uciToMove(pg, u);
+  if(!m){ const legal = pg.moves({verbose:true}); if(legal.length) m = pg.move(legal[Math.floor(Math.random()*legal.length)]); }
   if(m){ lastMove = m; pendingAnim = {from:m.from, to:m.to}; snd(sndKind(m,false)); }
   thinking = false;
   if(pg.game_over()){ finish(); return; }
@@ -1805,18 +1843,21 @@ async function humanMoveInner(from, to, animate=true){
   const m = pg.move({from, to, promotion:"q"});
   if(!m){ thinking = false; return; }
   lastMove = m; selSq = null;
+  predState.play = null; // drop any old predicted line now, so its engine searches stop queueing ahead of this move
   pendingAnim = animate ? {from:m.from, to:m.to} : null;
   clearMarks("pboard");
   snd(sndKind(m,true));
   const fenAfter = pg.fen(), ply = pg.history().length;
-  if(aux && !pg.game_over()){
+  if(aux && !aux.dead && !pg.game_over()){
     const lvl = $("plevel").value, L = LEVELS[lvl];
     spec = {fen:fenAfter, lvl, p:onW(aux, () => engineSearch(fenAfter, L.skill, L.depth, aux)).catch(() => null)};
   }
-  renderPlay(); setP("Coach is checking your move…");
-  const before = await (bp || enqueue(() => analyze(fenBeforeMove, FD)));
-  const after = await enqueue(() => analyze(fenAfter, FD));
-  if(id!==gameId) return;
+  renderPlay(); setP("Checking your move…");
+  let before = await (bp || enqueue(() => analyze(fenBeforeMove, FD)));
+  if(!before) before = await enqueue(() => analyze(fenBeforeMove, FD));
+  const after = before ? await enqueue(() => analyze(fenAfter, FD)) : null;
+  if(id!==gameId || over) return;
+  if(!before || !after) return skipAnalysis(id);
   const rv = judgePair(before, after, m);
   const moveNo = Math.ceil(ply/2) + (m.color==="w" ? "." : "...");
   setEvalBar("pevalbar", after, pFlip);
@@ -1825,8 +1866,8 @@ async function humanMoveInner(from, to, animate=true){
   if(rv.cls!=="good" && n>0 && !pg.game_over()){
     setP("Working out how this can go wrong…");
     const deep = await enqueue(() => analyze(fenAfter, Math.min(14, Math.max(FD, n+2))));
-    if(id!==gameId) return;
-    buildPred("play", fenAfter, deep.pv.length > after.pv.length ? deep.pv : after.pv, n, m.color);
+    if(id!==gameId || over) return;
+    buildPred("play", fenAfter, (deep && deep.pv.length > after.pv.length) ? deep.pv : after.pv, n, m.color);
   }
   fb = {html:explainHtml(before, after, m, rv, moveNo, true), arrows:feedbackArrows(before, m, rv, true), arrowsOn:true, badge:{sq:m.to, kind:rv.kind}, predOn:!!predState.play};
   if(rv.tag) ptags.push(rv.tag);
@@ -1840,6 +1881,14 @@ async function humanMoveInner(from, to, animate=true){
   renderPlay();
   await engineMove(id);
 }
+async function skipAnalysis(id){
+  await recoverEngine();
+  if(id!==gameId || over) return;
+  fb = {html:`<span class="empty">This move was not analysed because the engine had to restart.</span>`, arrows:[], arrowsOn:false, badge:null, predOn:false};
+  if(pg.game_over()){ thinking = false; finish(); return; }
+  if(!engineReady){ thinking = false; renderPlay(); setP("The engine could not restart. Reload the page."); return; }
+  await engineMove(id);
+}
 function takeback(){
   if(!awaiting) return;
   pg.undo();
@@ -1848,7 +1897,7 @@ function takeback(){
   if(awaiting.tagged) ptags.pop();
   analysisBefore = Promise.resolve(awaiting.before);
   setEvalBar("pevalbar", awaiting.before, pFlip);
-  awaiting = null; fb = null; selSq = null; predState.play = null;
+  awaiting = null; fb = null; selSq = null; predState.play = null; spec = null;
   renderPlay(); setP("Your move.");
 }
 async function continueGame(){
@@ -1939,6 +1988,7 @@ $("phint").onclick = async () => {
   if(thinking || awaiting || over) return;
   setP("Asking the engine…");
   const b = await analysisBefore;
+  if(!b || !b.best){ setP("No hint available right now. Your move."); return; }
   hint = b.best; if(fb) fb.arrowsOn = false;
   renderPlay(); setP("Green arrow: the engine's pick. Your move.");
 };
@@ -2160,14 +2210,14 @@ function buildReport(){
   out.push("3. What Stockfish wanted me to play instead.");
   out.push("4. What Stockfish expected the opponent to do after my moves, and what the opponent's plan or threat was.");
   out.push("");
-  out.push("# Chess Coach game report");
+  out.push("# Chess Analysis game report");
   out.push("");
   const result = ($("pgn").value.match(/\[Result "([^"]+)"\]/) || [])[1];
   out.push("- Reviewed side: " + who);
   out.push("- Result: " + (result || "not specified"));
   out.push("- Engine bot: " + BOT().name);
   out.push("- Stockfish depth: " + depth);
-  out.push("- Coach strictness: " + strict);
+  out.push("- Analysis strictness: " + strict);
   out.push("- Moves analyzed: " + moves.length);
   out.push("- Accuracy (" + who + "): " + (stats.n ? Math.round(stats.avg) + "%" : "n/a"));
   out.push("- Average centipawn loss: " + (stats.n ? Math.round(stats.acpl) + " cp" : "n/a"));
@@ -2266,28 +2316,39 @@ $("copyreport").onclick = async () => {
 };
 
 async function run(){
+  try{ await runGame(); }
+  catch(err){
+    console.error(err);
+    $("status").textContent = "Something went wrong while analysing that game. Try again.";
+    $("go").disabled = false; $("bar").style.display = "none";
+  }
+}
+async function runGame(){
   $("gamepick").classList.add("hide");
   if(!engineReady){ $("status").textContent = "Stockfish is not ready yet."; return; }
   const text = $("pgn").value.trim();
   const g = new Chess();
-  if(!text || !g.load_pgn(text)){ $("status").textContent = "That PGN could not be read. Check the moves and try again."; return; }
+  if(!text || !g.load_pgn(text, {sloppy:true})){ $("status").textContent = "That PGN could not be read. Check the moves and try again."; return; }
   const list = g.history({verbose:true});
   if(!list.length){ $("status").textContent = "No moves found in that PGN."; return; }
 
   const token = ++running, depth = parseInt($("depth").value,10);
   $("go").disabled = true; $("bar").style.display = "block"; $("barfill").style.width = "0";
-  const rep = new Chess(), fens = [rep.fen()];
+  const startFen = ((g.header && g.header()) || {}).FEN; // games that start from a custom position
+  const rep = startFen ? new Chess(startFen) : new Chess(), fens = [rep.fen()];
   list.forEach(m => { rep.move(m.san); fens.push(rep.fen()); });
 
   const out = new Array(fens.length), CH = 2;
-  let nextI = 0, done = 0, rpT = 0;
+  let nextI = 0, done = 0, rpT = 0, failed = false;
   const loop = async wk => {
     if(!wk) return;
-    while(token===running){
+    while(token===running && !failed && !wk.dead){
       const st = nextI; if(st >= fens.length) return; nextI += CH;
       for(let i=st; i<Math.min(st+CH, fens.length); i++){
-        if(token!==running) return;
+        if(token!==running || failed) return;
         out[i] = await onW(wk, () => analyze(fens[i], depth, wk));
+        if(!out[i] && wk !== main && main && !main.dead) out[i] = await onW(main, () => analyze(fens[i], depth, main)); // helper died: main takes over
+        if(!out[i]){ failed = true; return; }
         done++;
         if(!rpT) rpT = requestAnimationFrame(() => {
           rpT = 0;
@@ -2303,6 +2364,14 @@ async function run(){
   await Promise.all(jobs);
   cancelAnimationFrame(rpT); rpT = 0;
   if(token!==running) return;
+  if(failed){
+    $("bar").style.display = "none";
+    $("status").textContent = "The engine stopped responding. Restarting it…";
+    await recoverEngine();
+    $("go").disabled = false;
+    if(token===running) $("status").textContent = engineReady ? "Engine restarted. Tap Analyze game to try again." : "The engine could not restart. Reload the page.";
+    return;
+  }
   moves = list; pos = out; computeBook();
   review = moves.map((_,i) => judge(i));
   rflip = $("side").value==="b";
