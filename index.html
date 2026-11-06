@@ -96,6 +96,8 @@ button:disabled{opacity:.45;cursor:default}
 .chip.mistake{border-color:#ffa459;background:#ffa459;color:#2a1a08}
 .chip.blunder{border-color:#fa412d;background:#fa412d;color:#fff}
 .chip.brilliant{border-color:#1baca6;background:#1baca6;color:#fff}
+.chip.book{border-color:#a88865;background:#a88865;color:#fff}
+.chip.great{border-color:#749bbf;background:#749bbf;color:#fff}
 .chip.miss{border-color:#e06c5a;color:#e06c5a}
 .tally{display:grid;grid-template-columns:10rem 1fr 1.8667rem;gap:0.4rem 0.5333rem;align-items:center;font-size:0.9rem}
 .tally .t{height:0.6667rem;background:var(--line);border-radius:0.3333rem;overflow:hidden}
@@ -216,6 +218,8 @@ button:focus:not(:focus-visible),summary:focus:not(:focus-visible),select:focus:
 #moves .chip.blunder{border-left-color:#fa412d;background:var(--bg);color:var(--ink)}
 #moves .chip.brilliant{border-left-color:#1baca6;background:var(--bg);color:var(--ink)}
 #moves .chip.miss{border-left-color:#e06c5a;background:var(--bg);color:var(--ink)}
+#moves .chip.book{border-left-color:#a88865;background:var(--bg);color:var(--ink)}
+#moves .chip.great{border-left-color:#749bbf;background:var(--bg);color:var(--ink)}
 #moves .chip.sel{outline:2px solid #81b64c;outline-offset:-1px;background:var(--btn)}
 .c-graph svg{border-radius:0.4rem}
 #rinput textarea{height:4.6667rem}
@@ -623,7 +627,9 @@ const TAGS = {
 };
 const BADGES = {
   brilliant:{c:"#1baca6", i:"assets/badges/brilliant.png"},
+  great:{c:"#749bbf", i:"assets/badges/great.png"},
   best:{c:"#96bc4b", i:"assets/badges/best.png"}, good:{c:"#96af8b", i:"assets/badges/good.png"},
+  book:{c:"#a88865", i:"assets/badges/book.png"},
   miss:{c:"#e06c5a", i:"assets/badges/miss.svg"},
   inacc:{c:"#f7c631", i:"assets/badges/inaccuracy.png"}, mistake:{c:"#ffa459", i:"assets/badges/mistake.png"},
   blunder:{c:"#fa412d", i:"assets/badges/blunder.png"}
@@ -1394,6 +1400,19 @@ function judgePair(before, after, mv){
     return r;
   }
 
+  const bookAfter = lookupFen(after.fen);
+  if(bookAfter){
+    r.kind = "book"; r.cls = "book";
+    r.text = "Book move: " + (bookAfter.name || "known opening position") + ".";
+    return r;
+  }
+  const greatMove = uci === before.best && cls === "good" && !sac && ((after.cp || 0) - (before.cp || 0)) * mover >= 150;
+  if(greatMove){
+    r.kind = "great"; r.cls = "great";
+    r.text = "Great: " + describe(before.fen, before.best) + " turned the game from " + evalText(before) + " to " + evalText(after) + ".";
+    return r;
+  }
+
   // Missing a win or a mate matters even when the centipawn loss looks small.
   const hadMate = before.mate!=null && before.mate*mover>0, hasMate = after.mate!=null && after.mate*mover>0;
   const missedMate = hadMate && Math.abs(before.mate)<=8 && (!hasMate || Math.abs(after.mate)>Math.abs(before.mate)+2);
@@ -1464,8 +1483,8 @@ function judgePair(before, after, mv){
 
 function explainHtml(before, after, mv, rv, moveNo, live){
   const who = mv.color==="w" ? "White" : "Black";
-  const label = {brilliant:"Brilliant move", best:"Best move", good:"Good move", miss:"Missed chance", inacc:"Inaccuracy", mistake:"Mistake", blunder:"Blunder"}[rv.kind];
-  const vc = (rv.cls==="good" || rv.cls==="brilliant") ? "good" : rv.cls==="blunder" ? "bad" : "warn";
+  const label = {brilliant:"Brilliant move", great:"Great move", book:"Book move", best:"Best move", good:"Good move", miss:"Missed chance", inacc:"Inaccuracy", mistake:"Mistake", blunder:"Blunder"}[rv.kind];
+  const vc = (rv.cls==="good" || rv.cls==="brilliant" || rv.cls==="great" || rv.cls==="book") ? "good" : rv.cls==="blunder" ? "bad" : "warn";
   let h = `<p class="verdict ${vc}">${moveNo} ${mv.san} — ${label}</p>`;
   h += `<div class="evals">${who} · eval ${evalText(before)} → ${evalText(after)}${rv.loss>0?` · lost about ${(rv.loss/100).toFixed(1)} pawns`:""}</div>`;
   if(before.best && (!live || rv.cls!=="good")){
@@ -1480,6 +1499,8 @@ function explainHtml(before, after, mv, rv, moveNo, live){
   }
   if(rv.tag) h += `<div class="flaw"><span class="lbl">${TAGS[rv.tag]}.</span> ${rv.text}</div>`;
   else if(rv.kind==="brilliant" && rv.text) h += `<div class="plan"><span class="lbl">Brilliant.</span> ${rv.text}</div>`;
+  else if(rv.kind==="great" && rv.text) h += `<div class="plan"><span class="lbl">Great.</span> ${rv.text}</div>`;
+  else if(rv.kind==="book" && rv.text) h += `<div class="plan"><span class="lbl">Book.</span> ${rv.text}</div>`;
   if(rv.sacWorth && rv.kind!=="brilliant" && rv.tag!=="sac_bad"){
     const sc = rv.sac;
     h += `<div class="plan"><span class="lbl">Sacrifice check:</span> ` +
@@ -1491,7 +1512,7 @@ function explainHtml(before, after, mv, rv, moveNo, live){
 }
 function feedbackArrows(before, mv, rv, live){
   const out = [];
-  if(live && rv.cls==="good") return out;
+  if(live && (rv.cls==="good" || rv.cls==="great" || rv.cls==="book")) return out;
   if(!live && before.pv.length>2){
     const g = new Chess(before.fen);
     uciToMove(g, before.pv[0]);
@@ -2040,7 +2061,7 @@ async function humanMoveInner(from, to, animate=true){
   setEvalBar("pevalbar", after, pFlip);
   predState.play = null;
   const n = predN();
-  if(rv.cls!=="good" && rv.cls!=="brilliant" && n>0 && !pg.game_over()){
+  if((rv.cls!=="good" && rv.cls!=="brilliant" && rv.cls!=="great" && rv.cls!=="book") && n>0 && !pg.game_over()){
     setP("Working out how this can go wrong…");
     const deep = await enqueue(() => analyze(fenAfter, Math.min(14, Math.max(FD, n+2))));
     if(id!==gameId || over) return;
@@ -2049,7 +2070,7 @@ async function humanMoveInner(from, to, animate=true){
   fb = {html:explainHtml(before, after, m, rv, moveNo, true), arrows:feedbackArrows(before, m, rv, true), arrowsOn:true, badge:{sq:m.to, kind:rv.kind}, predOn:!!predState.play};
   if(rv.tag) ptags.push(rv.tag);
   if(pg.game_over()){ thinking = false; finish(); return; }
-  if(rv.cls!=="good"){
+  if(rv.cls!=="good" && rv.cls!=="brilliant" && rv.cls!=="great" && rv.cls!=="book"){
     awaiting = {before, after, tagged:!!rv.tag};
     thinking = false; renderPlay();
     setP("That cost you. Take it back and try again, or continue.");
@@ -2269,16 +2290,17 @@ function drawMoves(){
 }
 $("moves").addEventListener("click", e => { const c = e.target.closest(".chip"); if(c) pick(+c.dataset.i); });
 function reviewedStats(side){
-  const counts = {brilliant:0, best:0, good:0, miss:0, inacc:0, mistake:0, blunder:0};
+  const counts = {brilliant:0, great:0, best:0, good:0, book:0, miss:0, inacc:0, mistake:0, blunder:0};
   const fixed = {inacc:0, mistake:0, blunder:0};
   const losses = [];
   let acc = 0, lossSum = 0, bestMoves = 0, n = 0;
-  let brilliants = 0, missedWins = 0, missedMates = 0, missedTactics = 0, soundSacs = 0, badSacs = 0;
+  let brilliants = 0, greatMoves = 0, missedWins = 0, missedMates = 0, missedTactics = 0, soundSacs = 0, badSacs = 0;
   moves.forEach((m,i) => {
     if(side!=="wb" && m.color!==side) return;
     const rv = review[i];
     counts[rv.kind]++;
     if(rv.kind==="brilliant") brilliants++;
+    else if(rv.kind==="great") greatMoves++;
     if(rv.sac){ if(rv.sacWorth==="good") soundSacs++; else badSacs++; }
     if(rv.tag==="missed_mate") missedMates++;
     else if(rv.tag==="missed_win") missedWins++;
@@ -2299,7 +2321,7 @@ function reviewedStats(side){
   const median = n ? sorted[Math.floor((n-1)/2)] : 0;
   const variance = n ? losses.reduce((s,l)=>s+(l-acpl)*(l-acpl),0)/n : 0;
   return {counts, fixed, losses, avg:n?acc/n:0, acpl, median, std:Math.sqrt(variance), bestRate:n?bestMoves/n:0, n,
-    brilliants, missedWins, missedMates, missedTactics, soundSacs, badSacs};
+    brilliants, greatMoves, missedWins, missedMates, missedTactics, soundSacs, badSacs};
 }
 function interp(x, pts){
   if(x <= pts[0][0]) return pts[0][1];
@@ -2386,7 +2408,7 @@ function drawSummary(){
     }
   }
   $("rsum").innerHTML = `<div class="sumgrid"><div class="acc"><strong>${stats.n ? Math.round(stats.avg) : 0}</strong><small>${who} accuracy</small></div>`+
-    elo + `<div class="pills">${pill("brilliant","Brilliant","#1baca6")}${pill("best","Best","#96bc4b")}${pill("good","Good","#96af8b")}${pill("miss","Missed","#e06c5a")}${pill("inacc","Inaccuracies","#f7c631")}${pill("mistake","Mistakes","#ffa459")}${pill("blunder","Blunders","#fa412d")}</div></div>`+
+    elo + `<div class="pills">${pill("brilliant","Brilliant","#1baca6")}${pill("great","Great","#749bbf")}${pill("best","Best","#96bc4b")}${pill("good","Good","#96af8b")}${pill("book","Book","#a88865")}${pill("miss","Missed","#e06c5a")}${pill("inacc","Inaccuracies","#f7c631")}${pill("mistake","Mistakes","#ffa459")}${pill("blunder","Blunders","#fa412d")}</div></div>`+
     (detail ? `<div class="elodetail">${detail}</div>` : "");
 }
 function drawTally(){
@@ -2400,7 +2422,7 @@ const boardImageUrl = fen => "https://chessboardimage.com/" + fen.split(" ")[0].
 function buildReport(){
   const side = $("side").value, depth = $("depth").value, strict = $("strict").value;
   const who = side==="w" ? "White" : side==="b" ? "Black" : "Both sides";
-  const kinds = {brilliant:"Brilliant", best:"Best", good:"Good", miss:"Missed chance", inacc:"Inaccuracy", mistake:"Mistake", blunder:"Blunder"};
+  const kinds = {brilliant:"Brilliant", great:"Great", book:"Book", best:"Best", good:"Good", miss:"Missed chance", inacc:"Inaccuracy", mistake:"Mistake", blunder:"Blunder"};
   const stats = reviewedStats(side), counts = stats.counts;
   const flawList = [];
   moves.forEach((m,i) => {
@@ -2453,7 +2475,7 @@ function buildReport(){
       if(o) out.push("- Opponent Elo inputs: " + o.n + " moves, " + o.acc + "% accuracy, " + o.acpl + " ACPL, " + o.bestRate + "% engine-best moves, " + o.blunders + " blunders, " + o.mistakes + " mistakes, " + o.inaccuracies + " inaccuracies, " + o.std + " cp loss std dev");
     }
   }
-  out.push("- Move quality (" + who + "): Brilliant " + counts.brilliant + ", Best " + counts.best + ", Good " + counts.good + ", Missed chances " + counts.miss + ", Inaccuracies " + counts.inacc + ", Mistakes " + counts.mistake + ", Blunders " + counts.blunder);
+  out.push("- Move quality (" + who + "): Brilliant " + counts.brilliant + ", Great " + counts.great + ", Best " + counts.best + ", Good " + counts.good + ", Book " + counts.book + ", Missed chances " + counts.miss + ", Inaccuracies " + counts.inacc + ", Mistakes " + counts.mistake + ", Blunders " + counts.blunder);
   out.push("- Final FEN: " + pos[pos.length-1].fen);
   out.push("- Final board: ![Final board](" + boardImageUrl(pos[pos.length-1].fen) + ")");
   out.push("- Evaluations are from White's point of view (+ means White is better).");
@@ -2506,6 +2528,8 @@ function buildReport(){
     if(op) out.push("- Opening: " + op.name + " (" + op.eco + ")");
     if(rv.tag) out.push("- Flaw: " + TAGS[rv.tag] + ": " + rv.text);
     if(rv.kind==="brilliant") out.push("- Brilliant: " + rv.text);
+    else if(rv.kind==="great") out.push("- Great: " + rv.text);
+    else if(rv.kind==="book") out.push("- Book: " + rv.text);
     else if(rv.sacWorth) out.push("- Sacrifice check: " + (rv.sacWorth==="good" ? "worth it (" + rv.sac.net + " points offered)" : "not worth it") + ".");
   });
   return out.join("\n");
