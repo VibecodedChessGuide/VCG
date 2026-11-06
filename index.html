@@ -4,6 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Chess Coach</title>
+<meta name="description" content="Play Stockfish, get move-by-move AI analysis, review your games and explore openings. Runs fully in your browser.">
+<meta name="theme-color" content="#312e2b">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%23739552'/%3E%3Ctext x='50' y='72' font-size='64' text-anchor='middle' fill='%23fff'%3E%E2%99%9E%3C/text%3E%3C/svg%3E">
+<link rel="preload" href="assets/boards/green.png" as="image">
 <style>
 :root{
   color-scheme:dark;
@@ -599,7 +603,8 @@ function sndKind(m, mine){
 /* ================= Engine (worker pool) ================= */
 // One worker boots first so you can play right away. Extra workers start in the background and are
 // used for parallel game review and for computing the engine's reply while the coach checks your move.
-const MAXW = Math.max(1, Math.min(4, (navigator.hardwareConcurrency || 2) - 1, (navigator.deviceMemory || 4) < 4 ? 2 : 4));
+const BIG_BUILD = 50e6; // engines above this size are heavy: cap parallel copies and start helpers lazily
+const maxW = () => Math.max(1, Math.min(BOT().size > BIG_BUILD ? 2 : 4, (navigator.hardwareConcurrency || 2) - 1, (navigator.deviceMemory || 4) < 4 ? 2 : 4));
 const workerP = [], cache = new Map();
 let engineGen = 0, engineNote = "";
 const booting = new Set();
@@ -609,7 +614,12 @@ const booting = new Set();
 const SAB = typeof SharedArrayBuffer !== "undefined";
 const botUrl = b => (SAB || !b.single) ? b.url : b.single;
 
+let progP = null, progT = 0;
 function engineProgress(p){
+  progP = p;
+  if(!progT) progT = setTimeout(() => { progT = 0; if(progP) paintProgress(progP); }, 150);
+}
+function paintProgress(p){
   const pct = Math.max(0, Math.min(100, Math.round((p.percent || 0) * 100)));
   const txt = "Downloading " + BOT().name + "… " + pct + "%" +
     (p.speedText ? " · " + p.speedText : "") + (p.etaText ? " · " + p.etaText + " left" : "");
@@ -621,11 +631,13 @@ function engineProgress(p){
   $("status").textContent = txt;
 }
 function engineProgressReset(prog){
+  clearTimeout(progT); progT = 0; progP = null;
   for(const id of ["eprog","pprog"]){ const b = $(id); if(b){ b.style.display = "block"; b.classList.toggle("indet", !prog); } }
   for(const id of ["eprogfill","pprogfill"]){ const f = $(id); if(f) f.style.width = prog ? "0%" : ""; }
   for(const id of ["eprogtxt","pprogtxt"]){ const t = $(id); if(t){ t.style.display = "block"; t.textContent = "Downloading " + BOT().name + (prog ? "…" : "… (large engine file, please wait)"); } }
 }
 function engineProgressHide(){
+  clearTimeout(progT); progT = 0; progP = null;
   for(const id of ["eprog","pprog"]){ const b = $(id); if(b){ b.style.display = "none"; b.classList.remove("indet"); } }
   for(const id of ["eprogtxt","pprogtxt"]){ const t = $(id); if(t){ t.style.display = "none"; t.textContent = ""; } }
 }
@@ -706,6 +718,14 @@ async function selectBot(id){
 }
 $("plevel").onchange = () => { BOT().level = $("plevel").value; };
 
+function bootAux(gen){
+  if(maxW() < 2 || aux) return;
+  idle(() => getWorker(1).then(w => {
+    if(!w) return;
+    if(gen === engineGen) aux = w;
+    else { try{ w.w.terminate(); }catch(e){} }
+  }));
+}
 async function startEngine(gen){
   gen = gen === undefined ? engineGen : gen;
   try{
@@ -718,11 +738,7 @@ async function startEngine(gen){
     $("status").textContent = BOT().name + " ready" + note + ". Paste a game, import a file, or choose a demo game.";
     $("pstatus").textContent = BOT().name + " ready" + note + ". Pick a side and start.";
     $("pnew").disabled = false;
-    if(MAXW > 1) idle(() => getWorker(1).then(w => {
-      if(!w) return;
-      if(gen === engineGen) aux = w;
-      else { try{ w.w.terminate(); }catch(e){} }
-    }));
+    if(BOT().size <= BIG_BUILD) bootAux(gen); // big builds wait until a game or review actually needs a helper
   }catch(e){
     if(gen !== engineGen) return;
     engineProgressHide();
@@ -1060,7 +1076,7 @@ function addOpenings(list, done){
   let i = 0;
   const step = () => {
     const t0 = performance.now();
-    while(i < items.length && performance.now() - t0 < 10){
+    while(i < items.length && performance.now() - t0 < 5){
       const [eco, name, pgn, toks, idx] = items[i++];
       try{
         const fen = fenFor(toks), o = classify(eco, name, toks);
@@ -1598,7 +1614,7 @@ function drawBoard(svg, fen, arrows, hl, o={}){
       `<image href="${b.i}" x="${cx-18}" y="${cy-18}" width="36" height="36"/>`;
   }
   s += `<g class="ov"></g>`;
-  svg.innerHTML = s;
+  if(svg._s !== s){ svg._s = s; svg.innerHTML = s; }
   paintOverlay(svg, flip);
 }
 
@@ -1657,6 +1673,7 @@ function attachMarks(svg, getFlip, redraw){
   svg.addEventListener("pointerdown", e => {
     if(e.button!==2) return;
     e.preventDefault();
+    rc = {svg, r:svg.getBoundingClientRect()};
     from = sqAt(svg, e, getFlip());
     if(from) svg.setPointerCapture(e.pointerId);
   });
@@ -1669,6 +1686,7 @@ function attachMarks(svg, getFlip, redraw){
   svg.addEventListener("pointerup", e => {
     if(e.button!==2 || from===null) return;
     const to = sqAt(svg, e, getFlip()), m = marks[svg.id];
+    rc = null;
     m.pv = null;
     if(to){
       if(to===from) toggleIn(m.sq, to);
@@ -1733,6 +1751,7 @@ function setNames(){
 async function startGame(){
   if(!engineReady) return;
   const id = ++gameId;
+  bootAux(engineGen);
   humanColor = $("pcolor").value; pFlip = humanColor==="b";
   pg = new Chess(); selSq = null; lastMove = null; fb = null; hint = null;
   ptags = []; awaiting = null; over = false; thinking = false; hideSq = null; hoverSq = null; pendingAnim = null;
@@ -2255,7 +2274,7 @@ async function run(){
   list.forEach(m => { rep.move(m.san); fens.push(rep.fen()); });
 
   const out = new Array(fens.length), CH = 2;
-  let nextI = 0, done = 0;
+  let nextI = 0, done = 0, rpT = 0;
   const loop = async wk => {
     if(!wk) return;
     while(token===running){
@@ -2264,14 +2283,19 @@ async function run(){
         if(token!==running) return;
         out[i] = await onW(wk, () => analyze(fens[i], depth, wk));
         done++;
-        $("status").textContent = `Analyzing position ${done} of ${fens.length}…`;
-        $("barfill").style.width = (done/fens.length*100) + "%";
+        if(!rpT) rpT = requestAnimationFrame(() => {
+          rpT = 0;
+          if(token!==running) return;
+          $("status").textContent = `Analyzing position ${done} of ${fens.length}…`;
+          $("barfill").style.width = (done/fens.length*100) + "%";
+        });
       }
     }
   };
-  const nw = Math.min(MAXW, Math.ceil(fens.length/CH)), jobs = [];
+  const nw = Math.min(maxW(), Math.ceil(fens.length/CH)), jobs = [];
   for(let i=0;i<nw;i++) jobs.push(getWorker(i).then(loop));
   await Promise.all(jobs);
+  cancelAnimationFrame(rpT); rpT = 0;
   if(token!==running) return;
   moves = list; pos = out; computeBook();
   review = moves.map((_,i) => judge(i));
@@ -2377,7 +2401,7 @@ async function openDemoPicker(){
   btn.disabled = true; btn.textContent = "Loading games\u2026";
   $("status").textContent = "Loading Malakhov.pgn\u2026";
   try{
-    const res = await fetch("Malakhov.pgn", {cache:"no-store"});
+    const res = await fetch("Malakhov.pgn");
     if(!res.ok) throw new Error("HTTP " + res.status);
     demoGames = parsePgnGames(await res.text());
     if(!demoGames.length) throw new Error("no games found");
@@ -2471,7 +2495,7 @@ function showTab(t){
   $("tabEngine").classList.toggle("on", t==="engine");
   if(t==="open") renderOpenList();
   if(t==="engine" && !engineReady) startEngine(engineGen);
-  if(t==="review" && engineReady) for(let i=0;i<MAXW;i++) getWorker(i); // warm up helper workers
+  if(t==="review" && engineReady) for(let i=0;i<maxW();i++) getWorker(i); // warm up helper workers
 }
 $("tabPlay").onclick = () => showTab("play");
 $("tabReview").onclick = () => showTab("review");
@@ -2485,8 +2509,11 @@ if("serviceWorker" in navigator && /^https?:$/.test(location.protocol)){
 }
 drawBoard($("pboard"), new Chess().fen(), [], [], {});
 drawTallyInto($("ptally"), []);
-startEngine(engineGen);
-preloadPieces();
+// let the board, pieces and sounds load first, then start the big engine download
+let engineBooted = false;
+const bootEngine = () => { if(engineBooted) return; engineBooted = true; startEngine(engineGen); };
+if(document.readyState === "complete") bootEngine();
+else { addEventListener("load", bootEngine, {once:true}); setTimeout(bootEngine, 3000); }
 idle(loadOpenings);
 </script>
 </body>
