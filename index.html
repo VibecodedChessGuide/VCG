@@ -1300,20 +1300,22 @@ function sacrificeInfo(before, after, mv){
     const def = attackersTo(after.fen, mv.to, mover);
     const atkVals = atk.map(m => m.piece==="k" ? 0 : VAL[m.piece]).sort((a,b)=>a-b);
     const defVals = def.map(m => m.piece==="k" ? 0 : VAL[m.piece]).sort((a,b)=>a-b);
-    let offered = 0;
-    if(!def.length) offered = val;
-    else if(atkVals[0] < val && (atkVals.length > defVals.length || defVals[0] >= val)) offered = val - atkVals[0];
+    let directOffered = 0;
+    if(!def.length) directOffered = val;
+    else if(atkVals[0] < val && (atkVals.length > defVals.length || defVals[0] >= val)) directOffered = val - atkVals[0];
+    let offered = directOffered;
     if(after.best){
       const rm = uciToMove(new Chess(after.fen), after.best);
       if(rm && rm.captured && rm.to !== mv.to) offered = Math.max(offered, VAL[rm.captured] || 0);
     }
     const gain = mv.captured ? (VAL[mv.captured] || 0) : 0;
     const net = offered - gain;
+    const directNet = directOffered - gain;
     if(net < 2) return null;
     const evalAfter = (after.cp || 0) * (mover==="w" ? 1 : -1);
     const evalBefore = (before.cp || 0) * (mover==="w" ? 1 : -1);
     const mateFor = after.mate != null && after.mate * (mover==="w" ? 1 : -1) > 0;
-    return {net, offered, gain, evalAfter, evalBefore, mateFor, piece, sq: mv.to,
+    return {net, directNet, directOffered, offered, gain, evalAfter, evalBefore, mateFor, piece, sq: mv.to,
       sound: mateFor || evalAfter >= -50,
       worth: mateFor || evalAfter >= -50 || evalAfter >= evalBefore - 50};
   }catch(e){ return null; }
@@ -1335,10 +1337,15 @@ function judgePair(before, after, mv){
   const r = {loss, cls, kind: cls==="good" ? (uci===before.best ? "best" : "good") : cls, uci, tag:null, text:"",
     sac, sacWorth: sac ? (sac.worth ? "good" : "bad") : null};
 
-  // A sound material sacrifice that is also the engine's top choice is brilliant.
-  if(uci === before.best && sac && sac.sound){
+  // Brilliant is deliberately rare: the engine's top choice, a real sacrifice of the
+  // moved piece, clearly sound, not a book/forced move, and not already winning.
+  const bookBefore = lookupFen(before.fen);
+  const onlyMove = (() => { try { return new Chess(before.fen).moves().length <= 1; } catch(e){ return false; } })();
+  const notCrushing = before.mate == null && (before.cp || 0) * mover < 200;
+  const brilliantSound = sac && (sac.mateFor || sac.evalAfter >= 50);
+  if(uci === before.best && sac && sac.directNet >= 2 && brilliantSound && notCrushing && !bookBefore && !onlyMove){
     r.kind = "brilliant"; r.cls = "brilliant";
-    r.text = "You gave up about " + sac.net + " point" + (sac.net===1?"":"s") + " of material with your " + NAMES[sac.piece] +
+    r.text = "You gave up about " + sac.directNet + " point" + (sac.directNet===1?"":"s") + " of material with your " + NAMES[sac.piece] +
       ", and the engine still evaluates the position at " + evalText(after) + ". Worth it.";
     return r;
   }
