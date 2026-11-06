@@ -95,6 +95,8 @@ button:disabled{opacity:.45;cursor:default}
 .chip.inacc{border-color:#f7c631;color:#f7c631}
 .chip.mistake{border-color:#ffa459;background:#ffa459;color:#2a1a08}
 .chip.blunder{border-color:#fa412d;background:#fa412d;color:#fff}
+.chip.brilliant{border-color:#1baca6;background:#1baca6;color:#fff}
+.chip.miss{border-color:#e06c5a;color:#e06c5a}
 .tally{display:grid;grid-template-columns:10rem 1fr 1.8667rem;gap:0.4rem 0.5333rem;align-items:center;font-size:0.9rem}
 .tally .t{height:0.6667rem;background:var(--line);border-radius:0.3333rem;overflow:hidden}
 .tally .t i{display:block;height:100%;background:var(--bad)}
@@ -212,6 +214,8 @@ button:focus:not(:focus-visible),summary:focus:not(:focus-visible),select:focus:
 #moves .chip.inacc{border-left-color:#f7c631;color:var(--ink)}
 #moves .chip.mistake{border-left-color:#ffa459;background:var(--bg);color:var(--ink)}
 #moves .chip.blunder{border-left-color:#fa412d;background:var(--bg);color:var(--ink)}
+#moves .chip.brilliant{border-left-color:#1baca6;background:var(--bg);color:var(--ink)}
+#moves .chip.miss{border-left-color:#e06c5a;background:var(--bg);color:var(--ink)}
 #moves .chip.sel{outline:2px solid #81b64c;outline-offset:-1px;background:var(--btn)}
 .c-graph svg{border-radius:0.4rem}
 #rinput textarea{height:4.6667rem}
@@ -568,11 +572,14 @@ const LEVELS = {
 };
 const TAGS = {
   allowed_mate:"Allowed checkmate", allowed_fork:"Walked into a fork", hanging:"Left material hanging",
-  missed_mate:"Missed a checkmate", missed_fork:"Missed a fork", pin:"Walked into a pin",
-  missed_tactic:"Missed a tactic", drift:"Slow positional drift"
+  missed_mate:"Missed a checkmate", missed_win:"Missed a winning chance", missed_fork:"Missed a fork",
+  pin:"Walked into a pin", missed_tactic:"Missed a tactic", sac_bad:"Unsound sacrifice",
+  drift:"Slow positional drift"
 };
 const BADGES = {
+  brilliant:{c:"#1baca6", i:"assets/badges/brilliant.svg"},
   best:{c:"#96bc4b", i:"assets/badges/best.png"}, good:{c:"#96af8b", i:"assets/badges/good.png"},
+  miss:{c:"#e06c5a", i:"assets/badges/miss.svg"},
   inacc:{c:"#f7c631", i:"assets/badges/inaccuracy.png"}, mistake:{c:"#ffa459", i:"assets/badges/mistake.png"},
   blunder:{c:"#fa412d", i:"assets/badges/blunder.png"}
 };
@@ -1274,6 +1281,43 @@ $("oq").oninput = () => { clearTimeout(oTimer); oTimer = setTimeout(renderOpenLi
 ["okind","oside","ofirst"].forEach(id => $(id).onchange = renderOpenList);
 
 /* ================= Judging ================= */
+/* A sacrifice is material given up on purpose: the moved piece (or another piece the
+   opponent can win) is worth more than what the move captures. "sound" means the engine
+   still likes the position for the sacrificer, so the gamble is justified. */
+function attackersTo(fen, sq, color){
+  try{
+    return new Chess(withTurn(fen, color)).moves({verbose:true}).filter(m => m.to === sq && m.captured);
+  }catch(e){ return []; }
+}
+function sacrificeInfo(before, after, mv){
+  try{
+    const mover = mv.color, opp = mover==="w" ? "b" : "w";
+    const piece = mv.promotion || mv.piece, val = VAL[piece] || 0;
+    if(val < 2) return null;
+    const atk = attackersTo(after.fen, mv.to, opp);
+    if(!atk.length) return null;
+    const def = attackersTo(after.fen, mv.to, mover);
+    const atkVals = atk.map(m => m.piece==="k" ? 0 : VAL[m.piece]).sort((a,b)=>a-b);
+    const defVals = def.map(m => m.piece==="k" ? 0 : VAL[m.piece]).sort((a,b)=>a-b);
+    let offered = 0;
+    if(!def.length) offered = val;
+    else if(atkVals[0] < val && (atkVals.length > defVals.length || defVals[0] >= val)) offered = val - atkVals[0];
+    if(after.best){
+      const rm = uciToMove(new Chess(after.fen), after.best);
+      if(rm && rm.captured && rm.to !== mv.to) offered = Math.max(offered, VAL[rm.captured] || 0);
+    }
+    const gain = mv.captured ? (VAL[mv.captured] || 0) : 0;
+    const net = offered - gain;
+    if(net < 2) return null;
+    const evalAfter = (after.cp || 0) * (mover==="w" ? 1 : -1);
+    const evalBefore = (before.cp || 0) * (mover==="w" ? 1 : -1);
+    const mateFor = after.mate != null && after.mate * (mover==="w" ? 1 : -1) > 0;
+    return {net, offered, gain, evalAfter, evalBefore, mateFor, piece, sq: mv.to,
+      sound: mateFor || evalAfter >= -50,
+      worth: mateFor || evalAfter >= -50 || evalAfter >= evalBefore - 50};
+  }catch(e){ return null; }
+}
+
 function judgePair(before, after, mv){
   const uci = mv.from + mv.to + (mv.promotion||"");
   const mover = mv.color==="w" ? 1 : -1;
@@ -1284,19 +1328,40 @@ function judgePair(before, after, mv){
   if(loss >= st.blunder) cls = "blunder";
   else if(loss >= st.mistake) cls = "mistake";
   else if(loss >= st.inacc) cls = "inacc";
-  const kind = cls==="good" ? (uci===before.best ? "best" : "good") : cls;
-  const r = {loss, cls, kind, uci, tag:null, text:""};
-  if(cls==="good") return r;
-
   const reply = after.best ? uciToMove(new Chess(after.fen), after.best) : null;
   const bm = before.best ? uciToMove(new Chess(before.fen), before.best) : null;
+  const sac = sacrificeInfo(before, after, mv);
+  const r = {loss, cls, kind: cls==="good" ? (uci===before.best ? "best" : "good") : cls, uci, tag:null, text:"",
+    sac, sacWorth: sac ? (sac.worth ? "good" : "bad") : null};
+
+  // A sound material sacrifice that is also the engine's top choice is brilliant.
+  if(uci === before.best && sac && sac.sound){
+    r.kind = "brilliant"; r.cls = "brilliant";
+    r.text = "You gave up about " + sac.net + " point" + (sac.net===1?"":"s") + " of material with your " + NAMES[sac.piece] +
+      ", and the engine still evaluates the position at " + evalText(after) + ". Worth it.";
+    return r;
+  }
+
+  // Missing a win or a mate matters even when the centipawn loss looks small.
+  const hadMate = before.mate!=null && before.mate*mover>0, hasMate = after.mate!=null && after.mate*mover>0;
+  const missedMate = hadMate && Math.abs(before.mate)<=8 && (!hasMate || Math.abs(after.mate)>Math.abs(before.mate)+2);
+  const missedWin = !hadMate && before.cp*mover>=250 && after.cp*mover<150;
+  if(cls==="good" && (missedMate || missedWin)){
+    r.cls = "miss"; r.kind = "miss";
+    r.tag = missedMate ? "missed_mate" : "missed_win";
+    r.text = missedMate
+      ? "You had a forced mate" + (bm ? " starting with " + bm.san : "") + ", but this move lets it slip. When the enemy king is short of squares, check every check first."
+      : "You were winning by about " + (before.cp*mover/100).toFixed(1) + " pawns, but this move lets the advantage fall to " + (after.cp*mover/100).toFixed(1) + ". The engine's pick was " + (before.best ? describe(before.fen, before.best) : "unavailable") + ".";
+    return r;
+  }
+  if(cls==="good") return r;
 
   if(after.mate!=null && after.mate*mover<0 && Math.abs(after.mate)<=3){
     r.tag="allowed_mate";
     r.text = "This lets your opponent force checkmate" + (reply ? " (" + reply.san + ")" : "") + ". Before every move, check each check and capture your opponent has.";
     return r;
   }
-  if(before.mate!=null && before.mate*mover>0 && Math.abs(before.mate)<=4){
+  if(missedMate){
     r.tag="missed_mate";
     r.text = "You had a forced checkmate" + (bm ? " starting with " + bm.san : "") + ". When the enemy king is short of squares, look at every check first.";
     return r;
@@ -1330,6 +1395,16 @@ function judgePair(before, after, mv){
     r.text = "A forcing move was available: " + bm.san + ". Captures and checks are the first things to scan for.";
     return r;
   }
+  if(!hadMate && before.cp*mover>=250 && after.cp*mover<150){
+    r.tag="missed_win";
+    r.text = "You were winning by about " + (before.cp*mover/100).toFixed(1) + " pawns, but this move throws most of it away (" + (after.cp*mover/100).toFixed(1) + " now). The engine's pick was " + describe(before.fen, before.best) + ".";
+    return r;
+  }
+  if(sac && !sac.worth){
+    r.tag="sac_bad";
+    r.text = "This sacrifice does not pay off: the engine says you come out worse (" + evalText(after) + "). Not worth it.";
+    return r;
+  }
   r.tag="drift";
   r.text = "No piece was lost right away, but your position got worse. The engine's idea was " + describe(before.fen, before.best) + ".";
   return r;
@@ -1337,8 +1412,8 @@ function judgePair(before, after, mv){
 
 function explainHtml(before, after, mv, rv, moveNo, live){
   const who = mv.color==="w" ? "White" : "Black";
-  const label = {best:"Best move", good:"Good move", inacc:"Inaccuracy", mistake:"Mistake", blunder:"Blunder"}[rv.kind];
-  const vc = rv.cls==="good" ? "good" : rv.cls==="blunder" ? "bad" : "warn";
+  const label = {brilliant:"Brilliant move", best:"Best move", good:"Good move", miss:"Missed chance", inacc:"Inaccuracy", mistake:"Mistake", blunder:"Blunder"}[rv.kind];
+  const vc = (rv.cls==="good" || rv.cls==="brilliant") ? "good" : rv.cls==="blunder" ? "bad" : "warn";
   let h = `<p class="verdict ${vc}">${moveNo} ${mv.san} — ${label}</p>`;
   h += `<div class="evals">${who} · eval ${evalText(before)} → ${evalText(after)}${rv.loss>0?` · lost about ${(rv.loss/100).toFixed(1)} pawns`:""}</div>`;
   if(before.best && (!live || rv.cls!=="good")){
@@ -1352,6 +1427,14 @@ function explainHtml(before, after, mv, rv, moveNo, live){
     h += `<div class="plan"><span class="lbl">Opening: ${esc(op.name)}</span> ${openChips(op)} ${esc(typeTip(op))}${op.blurb ? " " + esc(op.blurb) : ""}${gnote}</div>`;
   }
   if(rv.tag) h += `<div class="flaw"><span class="lbl">${TAGS[rv.tag]}.</span> ${rv.text}</div>`;
+  else if(rv.kind==="brilliant" && rv.text) h += `<div class="plan"><span class="lbl">Brilliant.</span> ${rv.text}</div>`;
+  if(rv.sacWorth && rv.kind!=="brilliant" && rv.tag!=="sac_bad"){
+    const sc = rv.sac;
+    h += `<div class="plan"><span class="lbl">Sacrifice check:</span> ` +
+      (rv.sacWorth==="good"
+        ? `worth it — about ${sc.net} point${sc.net===1?"":"s"} given up, and the engine still rates the position ${evalText(after)}.`
+        : `not worth it — the engine says you end up worse (${evalText(after)}).`) + `</div>`;
+  }
   return h;
 }
 function feedbackArrows(before, mv, rv, live){
@@ -1905,7 +1988,7 @@ async function humanMoveInner(from, to, animate=true){
   setEvalBar("pevalbar", after, pFlip);
   predState.play = null;
   const n = predN();
-  if(rv.cls!=="good" && n>0 && !pg.game_over()){
+  if(rv.cls!=="good" && rv.cls!=="brilliant" && n>0 && !pg.game_over()){
     setP("Working out how this can go wrong…");
     const deep = await enqueue(() => analyze(fenAfter, Math.min(14, Math.max(FD, n+2))));
     if(id!==gameId || over) return;
@@ -2134,14 +2217,20 @@ function drawMoves(){
 }
 $("moves").addEventListener("click", e => { const c = e.target.closest(".chip"); if(c) pick(+c.dataset.i); });
 function reviewedStats(side){
-  const counts = {best:0, good:0, inacc:0, mistake:0, blunder:0};
+  const counts = {brilliant:0, best:0, good:0, miss:0, inacc:0, mistake:0, blunder:0};
   const fixed = {inacc:0, mistake:0, blunder:0};
   const losses = [];
   let acc = 0, lossSum = 0, bestMoves = 0, n = 0;
+  let brilliants = 0, missedWins = 0, missedMates = 0, missedTactics = 0, soundSacs = 0, badSacs = 0;
   moves.forEach((m,i) => {
     if(side!=="wb" && m.color!==side) return;
     const rv = review[i];
     counts[rv.kind]++;
+    if(rv.kind==="brilliant") brilliants++;
+    if(rv.sac){ if(rv.sacWorth==="good") soundSacs++; else badSacs++; }
+    if(rv.tag==="missed_mate") missedMates++;
+    else if(rv.tag==="missed_win") missedWins++;
+    else if(rv.tag==="missed_tactic" || rv.tag==="missed_fork") missedTactics++;
     const mover = m.color==="w" ? 1 : -1;
     const d = Math.max(0, (winPct(pos[i].cp) - winPct(pos[i+1].cp)) * mover);
     acc += rv.uci===pos[i].best ? 100 : Math.max(0, Math.min(100, 103.17*Math.exp(-0.04354*d) - 3.17));
@@ -2157,7 +2246,8 @@ function reviewedStats(side){
   const sorted = losses.slice().sort((a,b)=>a-b);
   const median = n ? sorted[Math.floor((n-1)/2)] : 0;
   const variance = n ? losses.reduce((s,l)=>s+(l-acpl)*(l-acpl),0)/n : 0;
-  return {counts, fixed, losses, avg:n?acc/n:0, acpl, median, std:Math.sqrt(variance), bestRate:n?bestMoves/n:0, n};
+  return {counts, fixed, losses, avg:n?acc/n:0, acpl, median, std:Math.sqrt(variance), bestRate:n?bestMoves/n:0, n,
+    brilliants, missedWins, missedMates, missedTactics, soundSacs, badSacs};
 }
 function interp(x, pts){
   if(x <= pts[0][0]) return pts[0][1];
@@ -2184,6 +2274,14 @@ const ERR_ELO = [
   [0,1900],[1,1800],[2,1700],[3,1600],[4,1500],[5,1400],
   [6,1300],[8,1150],[10,1000],[12,850],[15,650],[20,400]
 ];
+const BEST_ELO = [
+  [10,500],[20,750],[30,1000],[40,1250],[50,1500],[60,1700],[70,1900],[80,2100],[90,2300]
+];
+// missed chances per 10 moves (mates count double, wins 1.5x, tactics 0.75x)
+const MISS_ELO = [
+  [0,2100],[0.5,1950],[1,1800],[1.5,1650],[2,1500],[2.5,1350],
+  [3,1200],[4,1000],[5,850],[7,650],[10,400]
+];
 function estimateElo(color){
   const s = reviewedStats(color);
   if(!s.n) return null;
@@ -2191,7 +2289,12 @@ function estimateElo(color){
   const accElo = interp(s.avg, ACC_ELO);
   const errScore = Math.min(20, (s.fixed.blunder*3 + s.fixed.mistake*1.5 + s.fixed.inacc*0.5) / s.n * 40);
   const errElo = interp(errScore, ERR_ELO);
-  let perf = 0.6*acplElo + 0.2*accElo + 0.2*errElo;
+  const bestElo = interp(s.bestRate*100, BEST_ELO);
+  const missRate = (s.missedMates*2 + s.missedWins*1.5 + s.missedTactics*0.75) / s.n * 10;
+  const missElo = interp(missRate, MISS_ELO);
+  let perf = 0.45*acplElo + 0.15*accElo + 0.15*errElo + 0.15*bestElo + 0.10*missElo;
+  const bonus = Math.min(70, s.brilliants*10 + s.soundSacs*4);
+  perf += bonus - Math.min(80, s.badSacs*6);
   const penalty = Math.min(100, Math.max(0, (s.std - 50) * 1.5));
   perf -= penalty;
   const k = 0.55 + 0.25 * Math.min(1, s.n / 40);
@@ -2202,29 +2305,36 @@ function estimateElo(color){
   const high = Math.min(2500, Math.round((elo+width)/50)*50);
   return {elo, low, high, n:s.n, acc:Math.round(s.avg), acpl:Math.round(s.acpl),
     median:Math.round(s.median), std:Math.round(s.std), bestRate:Math.round(s.bestRate*100),
-    blunders:s.fixed.blunder, mistakes:s.fixed.mistake, inaccuracies:s.fixed.inacc};
+    blunders:s.fixed.blunder, mistakes:s.fixed.mistake, inaccuracies:s.fixed.inacc,
+    brilliants:s.brilliants, missedWins:s.missedWins, missedMates:s.missedMates, missedTactics:s.missedTactics,
+    soundSacs:s.soundSacs, badSacs:s.badSacs,
+    parts:{acpl:Math.round(acplElo), acc:Math.round(accElo), err:Math.round(errElo), best:Math.round(bestElo), miss:Math.round(missElo), bonus:Math.round(bonus)}};
 }
 function drawSummary(){
   const side = $("side").value, stats = reviewedStats(side), c = stats.counts;
   const who = side==="w" ? "White" : side==="b" ? "Black" : "Both sides";
   const pill = (k, label, col) => `<span class="pill"><i style="background:${col}"></i><b>${c[k]}</b> ${label}</span>`;
-  const tip = "Single-game estimate built from accuracy, ACPL, error rates, consistency and sample size. Not an official rating.";
+  const tip = "Single-game estimate from accuracy, ACPL, error rates, best-move rate, missed wins/mates/tactics, sound vs unsound sacrifices, consistency and sample size. Not an official rating.";
   let elo = "", detail = "";
   if(side==="wb"){
     const w = estimateElo("w"), b = estimateElo("b");
     if(w && b){
       elo = `<div class="elo" title="${tip}"><strong>~${w.elo} / ~${b.elo}</strong><small>White / Black estimated Elo</small></div>`;
-      detail = `Single-game ranges: White ~${w.low}–${w.high}, Black ~${b.low}–${b.high} · ${moves.length} moves`;
+      detail = `Single-game ranges: White ~${w.low}–${w.high}, Black ~${b.low}–${b.high} · ${moves.length} moves` +
+        ((w.brilliants+b.brilliants) ? ` · ${w.brilliants+b.brilliants} brilliant` : "");
     }
   } else {
     const e = estimateElo(side);
     if(e){
       elo = `<div class="elo" title="${tip}"><strong>~${e.elo}</strong><small>You • estimated Elo</small></div>`;
-      detail = `Single-game range ~${e.low}–${e.high} · ${e.n} moves · ${e.acc}% accuracy · ${e.acpl} ACPL`;
+      detail = `Single-game range ~${e.low}–${e.high} · ${e.n} moves · ${e.acc}% accuracy · ${e.acpl} ACPL` +
+        ((e.missedWins+e.missedMates) ? ` · ${e.missedWins+e.missedMates} missed win${(e.missedWins+e.missedMates)===1?"":"s"}` : "") +
+        (e.missedTactics ? ` · ${e.missedTactics} missed tactic${e.missedTactics===1?"":"s"}` : "") +
+        (e.brilliants ? ` · ${e.brilliants} brilliant` : "");
     }
   }
   $("rsum").innerHTML = `<div class="sumgrid"><div class="acc"><strong>${stats.n ? Math.round(stats.avg) : 0}</strong><small>${who} accuracy</small></div>`+
-    elo + `<div class="pills">${pill("best","Best","#96bc4b")}${pill("good","Good","#96af8b")}${pill("inacc","Inaccuracies","#f7c631")}${pill("mistake","Mistakes","#ffa459")}${pill("blunder","Blunders","#fa412d")}</div></div>`+
+    elo + `<div class="pills">${pill("brilliant","Brilliant","#1baca6")}${pill("best","Best","#96bc4b")}${pill("good","Good","#96af8b")}${pill("miss","Missed","#e06c5a")}${pill("inacc","Inaccuracies","#f7c631")}${pill("mistake","Mistakes","#ffa459")}${pill("blunder","Blunders","#fa412d")}</div></div>`+
     (detail ? `<div class="elodetail">${detail}</div>` : "");
 }
 function drawTally(){
@@ -2236,7 +2346,7 @@ function drawTally(){
 function buildReport(){
   const side = $("side").value, depth = $("depth").value, strict = $("strict").value;
   const who = side==="w" ? "White" : side==="b" ? "Black" : "Both sides";
-  const kinds = {best:"Best", good:"Good", inacc:"Inaccuracy", mistake:"Mistake", blunder:"Blunder"};
+  const kinds = {brilliant:"Brilliant", best:"Best", good:"Good", miss:"Missed chance", inacc:"Inaccuracy", mistake:"Mistake", blunder:"Blunder"};
   const stats = reviewedStats(side), counts = stats.counts;
   const flawList = [];
   moves.forEach((m,i) => {
@@ -2263,23 +2373,30 @@ function buildReport(){
   out.push("- Moves analyzed: " + moves.length);
   out.push("- Accuracy (" + who + "): " + (stats.n ? Math.round(stats.avg) + "%" : "n/a"));
   out.push("- Average centipawn loss: " + (stats.n ? Math.round(stats.acpl) + " cp" : "n/a"));
+  out.push("- Missed chances (" + who + "): " + (stats.missedWins + stats.missedMates + stats.missedTactics) +
+    " (" + stats.missedWins + " winning chances, " + stats.missedMates + " mates, " + stats.missedTactics + " tactics)");
+  out.push("- Brilliants / sacrifices (" + who + "): " + stats.brilliants + " brilliant, " +
+    stats.soundSacs + " sound sacrifices, " + stats.badSacs + " unsound sacrifices");
   if(side==="wb"){
     const w = estimateElo("w"), b = estimateElo("b");
     if(w && b){
       out.push("- Estimated Elo: White ~" + w.elo + " (range " + w.low + "-" + w.high + "), Black ~" + b.elo + " (range " + b.low + "-" + b.high + "); single-game estimates");
-      out.push("- White Elo inputs: " + w.n + " moves, " + w.acc + "% accuracy, " + w.acpl + " ACPL, " + w.bestRate + "% engine-best moves, " + w.blunders + " blunders, " + w.mistakes + " mistakes, " + w.inaccuracies + " inaccuracies (fixed 50/100/300 cp thresholds), " + w.std + " cp loss std dev");
-      out.push("- Black Elo inputs: " + b.n + " moves, " + b.acc + "% accuracy, " + b.acpl + " ACPL, " + b.bestRate + "% engine-best moves, " + b.blunders + " blunders, " + b.mistakes + " mistakes, " + b.inaccuracies + " inaccuracies (fixed 50/100/300 cp thresholds), " + b.std + " cp loss std dev");
+      out.push("- White Elo inputs: " + w.n + " moves, " + w.acc + "% accuracy, " + w.acpl + " ACPL, " + w.bestRate + "% engine-best moves, " + w.blunders + " blunders, " + w.mistakes + " mistakes, " + w.inaccuracies + " inaccuracies (fixed 50/100/300 cp thresholds), " + w.std + " cp loss std dev, " + w.missedWins + " missed wins, " + w.missedMates + " missed mates, " + w.missedTactics + " missed tactics, " + w.brilliants + " brilliants, " + w.soundSacs + " sound sacrifices, " + w.badSacs + " unsound sacrifices");
+      out.push("- Black Elo inputs: " + b.n + " moves, " + b.acc + "% accuracy, " + b.acpl + " ACPL, " + b.bestRate + "% engine-best moves, " + b.blunders + " blunders, " + b.mistakes + " mistakes, " + b.inaccuracies + " inaccuracies (fixed 50/100/300 cp thresholds), " + b.std + " cp loss std dev, " + b.missedWins + " missed wins, " + b.missedMates + " missed mates, " + b.missedTactics + " missed tactics, " + b.brilliants + " brilliants, " + b.soundSacs + " sound sacrifices, " + b.badSacs + " unsound sacrifices");
+      out.push("- Elo model (White): ACPL ~" + w.parts.acpl + ", accuracy ~" + w.parts.acc + ", error rate ~" + w.parts.err + ", best-move rate ~" + w.parts.best + ", missed chances ~" + w.parts.miss + ", brilliant bonus +" + w.parts.bonus + " -> ~" + w.elo);
+      out.push("- Elo model (Black): ACPL ~" + b.parts.acpl + ", accuracy ~" + b.parts.acc + ", error rate ~" + b.parts.err + ", best-move rate ~" + b.parts.best + ", missed chances ~" + b.parts.miss + ", brilliant bonus +" + b.parts.bonus + " -> ~" + b.elo);
     }
   } else {
     const e = estimateElo(side);
     if(e){
       out.push("- Estimated Elo (" + who + "): ~" + e.elo + " (range " + e.low + "-" + e.high + "; single-game estimate)");
-      out.push("- Elo inputs (" + who + "): " + e.n + " moves, " + e.acc + "% accuracy, " + e.acpl + " ACPL, " + e.bestRate + "% engine-best moves, " + e.blunders + " blunders, " + e.mistakes + " mistakes, " + e.inaccuracies + " inaccuracies (fixed 50/100/300 cp thresholds), " + e.std + " cp loss std dev");
+      out.push("- Elo inputs (" + who + "): " + e.n + " moves, " + e.acc + "% accuracy, " + e.acpl + " ACPL, " + e.bestRate + "% engine-best moves, " + e.blunders + " blunders, " + e.mistakes + " mistakes, " + e.inaccuracies + " inaccuracies (fixed 50/100/300 cp thresholds), " + e.std + " cp loss std dev, " + e.missedWins + " missed wins, " + e.missedMates + " missed mates, " + e.missedTactics + " missed tactics, " + e.brilliants + " brilliants, " + e.soundSacs + " sound sacrifices, " + e.badSacs + " unsound sacrifices");
+      out.push("- Elo model (" + who + "): ACPL ~" + e.parts.acpl + ", accuracy ~" + e.parts.acc + ", error rate ~" + e.parts.err + ", best-move rate ~" + e.parts.best + ", missed chances ~" + e.parts.miss + ", brilliant bonus +" + e.parts.bonus + " -> ~" + e.elo);
       const o = estimateElo(side==="w" ? "b" : "w");
       if(o) out.push("- Opponent Elo inputs: " + o.n + " moves, " + o.acc + "% accuracy, " + o.acpl + " ACPL, " + o.bestRate + "% engine-best moves, " + o.blunders + " blunders, " + o.mistakes + " mistakes, " + o.inaccuracies + " inaccuracies, " + o.std + " cp loss std dev");
     }
   }
-  out.push("- Move quality (" + who + "): Best " + counts.best + ", Good " + counts.good + ", Inaccuracies " + counts.inacc + ", Mistakes " + counts.mistake + ", Blunders " + counts.blunder);
+  out.push("- Move quality (" + who + "): Brilliant " + counts.brilliant + ", Best " + counts.best + ", Good " + counts.good + ", Missed chances " + counts.miss + ", Inaccuracies " + counts.inacc + ", Mistakes " + counts.mistake + ", Blunders " + counts.blunder);
   out.push("- Final FEN: " + pos[pos.length-1].fen);
   out.push("- Evaluations are from White's point of view (+ means White is better).");
   out.push("");
@@ -2329,6 +2446,8 @@ function buildReport(){
     const op = lookupFen(after.fen);
     if(op) out.push("- Opening: " + op.name + " (" + op.eco + ")");
     if(rv.tag) out.push("- Flaw: " + TAGS[rv.tag] + ": " + rv.text);
+    if(rv.kind==="brilliant") out.push("- Brilliant: " + rv.text);
+    else if(rv.sacWorth) out.push("- Sacrifice check: " + (rv.sacWorth==="good" ? "worth it (" + rv.sac.net + " points offered)" : "not worth it") + ".");
   });
   return out.join("\n");
 }
