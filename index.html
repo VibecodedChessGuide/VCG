@@ -2395,6 +2395,8 @@ function drawTally(){
   drawTallyInto($("tally"), tags);
 }
 
+const boardImageUrl = fen => "https://chessboardimage.com/" + fen.split(" ")[0];
+
 function buildReport(){
   const side = $("side").value, depth = $("depth").value, strict = $("strict").value;
   const who = side==="w" ? "White" : side==="b" ? "Black" : "Both sides";
@@ -2413,6 +2415,9 @@ function buildReport(){
   out.push("2. What I played and what each of my moves was trying to do.");
   out.push("3. What Stockfish wanted me to play instead.");
   out.push("4. What Stockfish expected the opponent to do after my moves, and what the opponent's plan or threat was.");
+  out.push("");
+  out.push("Use the chessboardimage.com markdown links in this report to display the board position when you discuss a move.");
+  out.push("Board image URL format: https://chessboardimage.com/<FEN board field> (example: https://chessboardimage.com/rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR).");
   out.push("");
   out.push("# Chess Analysis game report");
   out.push("");
@@ -2450,6 +2455,7 @@ function buildReport(){
   }
   out.push("- Move quality (" + who + "): Brilliant " + counts.brilliant + ", Best " + counts.best + ", Good " + counts.good + ", Missed chances " + counts.miss + ", Inaccuracies " + counts.inacc + ", Mistakes " + counts.mistake + ", Blunders " + counts.blunder);
   out.push("- Final FEN: " + pos[pos.length-1].fen);
+  out.push("- Final board: ![Final board](" + boardImageUrl(pos[pos.length-1].fen) + ")");
   out.push("- Evaluations are from White's point of view (+ means White is better).");
   out.push("");
   out.push("## PGN");
@@ -2482,6 +2488,7 @@ function buildReport(){
     const whoMove = m.color==="w" ? "White" : "Black";
     out.push("");
     out.push("### " + num + " " + m.san + " (" + whoMove + (mine ? ", reviewed side" : "") + ") - " + kinds[rv.kind]);
+    out.push("- Board after the move: ![Board after " + num + " " + m.san + "](" + boardImageUrl(after.fen) + ")");
     out.push("- Evaluation: " + evalText(before) + " -> " + evalText(after) + (rv.loss>0 ? " (lost " + (rv.loss/100).toFixed(2) + " pawns)" : ""));
     out.push("- What the move does: " + describe(before.fen, rv.uci));
     if(before.best){
