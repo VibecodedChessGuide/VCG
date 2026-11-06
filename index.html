@@ -298,12 +298,41 @@ html{overflow-y:scroll}
 @media (pointer:coarse){
   .tabs button,.row button,.row select,.nav button,.rctl>*,.pctl button,#go,.pn input,.pn select{min-height:2.75rem}
 }
+/* ===== PLAY tab: the board is pinned, everything else scrolls ===== */
+.side{display:flex;flex-direction:column;gap:var(--gap);min-width:0}
+.side>.card{flex:none;min-width:0}
+body[data-tab="play"]{height:100vh;height:100svh;overflow:hidden}
+body[data-tab="play"] .wrap{height:100vh;height:100svh;display:flex;flex-direction:column}
+body[data-tab="play"] .top,body[data-tab="play"] details.settings{flex:none}
+/* settings open as an overlay so they can't push the board */
+body[data-tab="play"] details.settings{position:relative;z-index:30}
+body[data-tab="play"] details.settings .row{position:absolute;left:0;right:0;top:100%;margin:0;padding:.6rem;background:var(--panel);border-radius:0 0 .5rem .5rem;box-shadow:0 10px 24px rgba(0,0,0,.45)}
+body[data-tab="play"] #playPanel{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;gap:var(--gap)}
+body[data-tab="play"] .c-board{flex:none;position:static}
+body[data-tab="play"] .boardgrid{width:min(100%,max(15rem,calc(100vh - 24rem)));width:min(100%,max(15rem,calc(100svh - 24rem)))}
+body[data-tab="play"] .side{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+/* landscape / wide: board left (fixed), scrolling panel right */
+@media (min-width:40rem) and (orientation:landscape),(min-width:64rem) and (min-height:36rem){
+  body[data-tab="play"] #playPanel{
+    --bw:min(60%,max(12rem,calc(100vh - 8rem)));--bw:min(60%,max(12rem,calc(100svh - 8rem)));
+    display:grid;grid-template-areas:"board side";grid-template-rows:minmax(0,1fr);
+    grid-template-columns:minmax(0,var(--bw)) minmax(12rem,1fr);justify-content:center}
+  body[data-tab="play"] .c-board{grid-area:board;align-self:start;max-height:100%;overflow-y:auto}
+  body[data-tab="play"] .side{grid-area:side}
+  body[data-tab="play"] .boardgrid{width:min(100%,max(12rem,calc(100vh - 11rem)));width:min(100%,max(12rem,calc(100svh - 11rem)))}
+}
+@media (min-width:64rem) and (min-height:36rem){
+  body[data-tab="play"] #playPanel{
+    --bw:min(62%,max(20rem,calc(100vh - 12.7rem)));--bw:min(62%,max(20rem,calc(100svh - 12.7rem)));
+    grid-template-columns:minmax(0,var(--bw)) minmax(16rem,min(56rem,calc(100% - var(--bw) - var(--gap))))}
+  body[data-tab="play"] .boardgrid{width:100%}
+}
 .fsbtn{flex:none;margin-left:auto;font-size:.8rem;padding:.4rem .6rem;white-space:nowrap}
 body.cssfs .top h1,body.cssfs .top .tabs{display:none}
 body.cssfs .top{justify-content:flex-end}
 </style>
 </head>
-<body>
+<body data-tab="play">
 <div class="wrap">
   <div class="top">
     <h1>Chess Analysis</h1>
@@ -334,30 +363,6 @@ body.cssfs .top{justify-content:flex-end}
 
   <!-- ================= PLAY ================= -->
   <div id="playPanel" class="lay play">
-    <div class="card c-setup">
-      <div class="row">
-        <select id="pcolor" aria-label="Your color">
-          <option value="w">White</option>
-          <option value="b">Black</option>
-        </select>
-        <select id="plevel" aria-label="Engine strength">
-          <option value="beginner">Beginner</option>
-          <option value="casual" selected>Casual</option>
-          <option value="strong">Strong</option>
-          <option value="max">Full strength</option>
-        </select>
-        <button class="primary" id="pnew" disabled>New game</button>
-      </div>
-      <div class="row">
-        <button id="phint" disabled>Hint</button>
-        <button id="presign" disabled>Resign</button>
-        <button id="ptoggle">Threats: off</button>
-      </div>
-      <div class="status" id="pstatus">Loading Stockfish…</div>
-      <div class="bar" id="pprog"><i id="pprogfill"></i></div>
-      <div class="ptxt" id="pprogtxt"></div>
-    </div>
-
     <div class="card c-board">
       <div class="boardgrid">
         <div class="pl" id="ptop"><span class="sw b"></span>Stockfish</div>
@@ -381,11 +386,37 @@ body.cssfs .top{justify-content:flex-end}
       <div class="hist" id="phist"></div>
     </div>
 
-    <div class="card c-coach" id="pcoach"><span class="empty">Start a game. After each move you play, the analysis tells you what the engine would have done.</span></div>
+    <div class="side" id="pside">
+      <div class="card c-setup">
+        <div class="row">
+          <select id="pcolor" aria-label="Your color">
+            <option value="w">White</option>
+            <option value="b">Black</option>
+          </select>
+          <select id="plevel" aria-label="Engine strength">
+            <option value="beginner">Beginner</option>
+            <option value="casual" selected>Casual</option>
+            <option value="strong">Strong</option>
+            <option value="max">Full strength</option>
+          </select>
+          <button class="primary" id="pnew" disabled>New game</button>
+        </div>
+        <div class="row">
+          <button id="phint" disabled>Hint</button>
+          <button id="presign" disabled>Resign</button>
+          <button id="ptoggle">Threats: off</button>
+        </div>
+        <div class="status" id="pstatus">Loading Stockfish…</div>
+        <div class="bar" id="pprog"><i id="pprogfill"></i></div>
+        <div class="ptxt" id="pprogtxt"></div>
+      </div>
 
-    <div class="card c-tally">
-      <h2>Flaws this game</h2>
-      <div id="ptally" class="tally"></div>
+      <div class="card c-coach" id="pcoach"><span class="empty">Start a game. After each move you play, the analysis tells you what the engine would have done.</span></div>
+
+      <div class="card c-tally">
+        <h2>Flaws this game</h2>
+        <div id="ptally" class="tally"></div>
+      </div>
     </div>
   </div>
 
@@ -2742,6 +2773,7 @@ $("strict").onchange = () => {
 
 /* ================= Tabs ================= */
 function showTab(t){
+  document.body.dataset.tab = t;
   $("playPanel").classList.toggle("hide", t!=="play");
   $("reviewPanel").classList.toggle("hide", t!=="review");
   $("openPanel").classList.toggle("hide", t!=="open");
