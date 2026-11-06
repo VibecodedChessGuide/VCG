@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Chess Coach</title>
-<meta name="description" content="Play Stockfish, get move-by-move AI analysis, review your games and explore openings. Runs fully in your browser.">
+<meta name="description" content="Play Stockfish, get move-by-move coaching, review your games and explore openings. Runs fully in your browser.">
 <meta name="theme-color" content="#312e2b">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%23739552'/%3E%3Ctext x='50' y='72' font-size='64' text-anchor='middle' fill='%23fff'%3E%E2%99%9E%3C/text%3E%3C/svg%3E">
 <link rel="preload" href="assets/boards/green.png" as="image">
@@ -614,16 +614,21 @@ const booting = new Set();
 const SAB = typeof SharedArrayBuffer !== "undefined";
 const botUrl = b => (SAB || !b.single) ? b.url : b.single;
 
-let progP = null, progT = 0;
+let progP = null, progT = 0, dlDone = false;
 function engineProgress(p){
+  if(engineReady) return; // ignore late progress messages once the engine is up
   progP = p;
   if(!progT) progT = setTimeout(() => { progT = 0; if(progP) paintProgress(progP); }, 150);
 }
 function paintProgress(p){
   const pct = Math.max(0, Math.min(100, Math.round((p.percent || 0) * 100)));
-  const txt = "Downloading " + BOT().name + "… " + pct + "%" +
-    (p.speedText ? " · " + p.speedText : "") + (p.etaText ? " · " + p.etaText + " left" : "");
-  for(const id of ["eprog","pprog"]){ const b = $(id); if(b){ b.style.display = "block"; b.classList.remove("indet"); } }
+  const fin = pct >= 100;
+  if(fin) dlDone = true;
+  const txt = fin
+    ? "Download complete. Starting " + BOT().name + "… (unpacking a large engine can take a few seconds)"
+    : "Downloading " + BOT().name + "… " + pct + "%" +
+      (p.speedText ? " · " + p.speedText : "") + (p.etaText ? " · " + p.etaText + " left" : "");
+  for(const id of ["eprog","pprog"]){ const b = $(id); if(b){ b.style.display = "block"; b.classList.toggle("indet", fin); } }
   for(const id of ["eprogfill","pprogfill"]){ const f = $(id); if(f) f.style.width = pct + "%"; }
   for(const id of ["eprogtxt","pprogtxt"]){ const t = $(id); if(t){ t.style.display = "block"; t.textContent = txt; } }
   $("esstatus").textContent = txt;
@@ -631,7 +636,7 @@ function paintProgress(p){
   $("status").textContent = txt;
 }
 function engineProgressReset(prog){
-  clearTimeout(progT); progT = 0; progP = null;
+  clearTimeout(progT); progT = 0; progP = null; dlDone = false;
   for(const id of ["eprog","pprog"]){ const b = $(id); if(b){ b.style.display = "block"; b.classList.toggle("indet", !prog); } }
   for(const id of ["eprogfill","pprogfill"]){ const f = $(id); if(f) f.style.width = prog ? "0%" : ""; }
   for(const id of ["eprogtxt","pprogtxt"]){ const t = $(id); if(t){ t.style.display = "block"; t.textContent = "Downloading " + BOT().name + (prog ? "…" : "… (large engine file, please wait)"); } }
@@ -734,9 +739,10 @@ async function startEngine(gen){
     engineReady = true;
     engineProgressHide();
     const note = engineNote ? " (" + engineNote + ")" : "";
-    $("esstatus").textContent = BOT().name + " ready" + note + ".";
-    $("status").textContent = BOT().name + " ready" + note + ". Paste a game, import a file, or choose a demo game.";
-    $("pstatus").textContent = BOT().name + " ready" + note + ". Pick a side and start.";
+    const done = (dlDone ? "Download complete. " : "") + BOT().name + " ready" + note;
+    $("esstatus").textContent = done + ".";
+    $("status").textContent = done + ". Paste a game, import a file, or choose a demo game.";
+    $("pstatus").textContent = done + ". Pick a side and start.";
     $("pnew").disabled = false;
     if(BOT().size <= BIG_BUILD) bootAux(gen); // big builds wait until a game or review actually needs a helper
   }catch(e){
