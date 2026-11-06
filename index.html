@@ -521,16 +521,17 @@ body.cssfs .top{justify-content:flex-end}
 
 <script src="assets/js/chess.min.js"></script>
 <script>
+const ENGINE_BASE = location.hostname.endsWith("github.io") ? "/VCG-engines/assets/js/" : "assets/js/";
 const BOTS = [
-  {id:"sf19",   name:"Stockfish 19",             level:"max",    url:"assets/js/stockfish-19.js",            single:"assets/js/stockfish-19-single.js",      size:99076105, prog:1},
-  {id:"sf19s",  name:"Stockfish 19 Single",      level:"max",    url:"assets/js/stockfish-19-single.js",     size:99169054, prog:1},
-  {id:"sf19l",  name:"Stockfish 19 Lite",        level:"casual", url:"assets/js/stockfish-19-lite.js",       single:"assets/js/stockfish-19-lite-single.js", size:1697617, prog:1},
-  {id:"sf19ls", name:"Stockfish 19 Lite Single", level:"casual", url:"assets/js/stockfish-19-lite-single.js", size:1845971, prog:1},
-  {id:"sf19a",  name:"Stockfish 19 ASM",         level:"max",    url:"assets/js/stockfish-19-asm.js",        size:3155627},
-  {id:"sf18",   name:"Stockfish 18",             level:"max",    url:"assets/js/stockfish-18.js",            single:"assets/js/stockfish-18-lite-single.js", size:113007340},
-  {id:"sf18l",  name:"Stockfish 18 Lite",        level:"casual", url:"assets/js/stockfish-18-lite.js",       single:"assets/js/stockfish-18-lite-single.js", size:7093151},
-  {id:"sf18ls", name:"Stockfish 18 Lite Single", level:"casual", url:"assets/js/stockfish-18-lite-single.js", size:7295411},
-  {id:"sf18a",  name:"Stockfish 18 ASM",         level:"max",    url:"assets/js/stockfish-18-asm.js",        size:10509235}
+  {id:"sf19",   name:"Stockfish 19",             level:"max",    url:ENGINE_BASE+"stockfish-19.js",            single:ENGINE_BASE+"stockfish-19-single.js",      size:99076105, prog:1},
+  {id:"sf19s",  name:"Stockfish 19 Single",      level:"max",    url:ENGINE_BASE+"stockfish-19-single.js",     size:99169054, prog:1},
+  {id:"sf19l",  name:"Stockfish 19 Lite",        level:"casual", url:ENGINE_BASE+"stockfish-19-lite.js",       single:ENGINE_BASE+"stockfish-19-lite-single.js", size:1697617, prog:1},
+  {id:"sf19ls", name:"Stockfish 19 Lite Single", level:"casual", url:ENGINE_BASE+"stockfish-19-lite-single.js", size:1845971, prog:1},
+  {id:"sf19a",  name:"Stockfish 19 ASM",         level:"max",    url:ENGINE_BASE+"stockfish-19-asm.js",        size:3155627},
+  {id:"sf18",   name:"Stockfish 18",             level:"max",    url:ENGINE_BASE+"stockfish-18.js",            single:ENGINE_BASE+"stockfish-18-lite-single.js", size:113007340},
+  {id:"sf18l",  name:"Stockfish 18 Lite",        level:"casual", url:ENGINE_BASE+"stockfish-18-lite.js",       single:ENGINE_BASE+"stockfish-18-lite-single.js", size:7093151},
+  {id:"sf18ls", name:"Stockfish 18 Lite Single", level:"casual", url:ENGINE_BASE+"stockfish-18-lite-single.js", size:7295411},
+  {id:"sf18a",  name:"Stockfish 18 ASM",         level:"max",    url:ENGINE_BASE+"stockfish-18-asm.js",        size:10509235}
 ];
 let botId = "sf19";
 const BOT = () => BOTS.find(b => b.id === botId) || BOTS[0];
@@ -2773,6 +2774,7 @@ fsPaint();
 // Cache engine files (cache-first) so big Stockfish builds download only once.
 if("serviceWorker" in navigator && /^https?:$/.test(location.protocol)){
   navigator.serviceWorker.register("sw.js").catch(e => console.warn("Engine cache unavailable:", e));
+  if(location.hostname.endsWith("github.io")) navigator.serviceWorker.register("/VCG-engines/sw.js", {scope:"/VCG-engines/"}).catch(() => {});
   if(navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
 }
 drawBoard($("pboard"), new Chess().fen(), [], [], {});
