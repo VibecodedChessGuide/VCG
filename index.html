@@ -258,16 +258,29 @@ body{min-height:100vh;min-height:100dvh}
 .lay{gap:var(--gap)}
 .card{padding:clamp(.55rem,1vw,.9rem)}
 /* single column: the board never grows taller than the screen, so landscape phones still see all of it */
-.boardgrid{width:min(100%,max(17rem,calc(100vh - 9rem)));width:min(100%,max(17rem,calc(100dvh - 9rem)));margin-inline:auto}
+.boardgrid{width:min(100%,max(17rem,calc(100vh - 9rem)));width:min(100%,max(17rem,calc(100svh - 9rem)));margin-inline:auto}
 .gamelist{max-height:min(18.7rem,40vh);max-height:min(18.7rem,40dvh)}
 .plist{max-height:min(13.5rem,32vh);max-height:min(13.5rem,32dvh)}
 #moves{max-height:min(13.5rem,32vh);max-height:min(13.5rem,32dvh)}
+/* ===== reserve space so the play board never jumps ===== */
+/* keep the scrollbar gutter even when the page isn't scrolling, so page width (and board width) never changes */
+html{overflow-y:scroll}
+@supports (scrollbar-gutter:stable){html{overflow-y:auto;scrollbar-gutter:stable}}
+/* status line: always room for two lines */
+#pstatus{min-height:calc(2 * 1.45 * 0.8667rem)}
+/* download bar + text above the board: always occupy their space, just invisible until used */
+#pprog{display:block!important;visibility:hidden}
+#pprog[style*="block"]{visibility:visible}
+#pprogtxt{display:block!important;visibility:hidden;min-height:1.2rem}
+#pprogtxt[style*="block"]{visibility:visible}
+/* button row under the board keeps its height when Take back / Continue / Review appear */
+.c-board .nav{min-height:2.75rem}
 .hide{display:none!important}
 @media (min-width:64rem) and (min-height:36rem){
   /* board column follows window height (square board); the side column can never be wider than it */
   .play,.rev{
     --bw:min(62%,max(20rem,calc(100vh - 12.7rem)));
-    --bw:min(62%,max(20rem,calc(100dvh - 12.7rem)));
+    --bw:min(62%,max(20rem,calc(100svh - 12.7rem)));
     grid-template-columns:minmax(0,var(--bw)) minmax(16rem,min(56rem,calc(var(--bw) - 1.8667rem),calc(100% - var(--bw) - var(--gap))));
     justify-content:center;gap:var(--gap)}
   .boardgrid{width:100%}
