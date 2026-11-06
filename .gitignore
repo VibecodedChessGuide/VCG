@@ -2,3 +2,4 @@ bak
 *.log
 .coach_inline_check.js
 assets/js/stockfish-18.wasm
+assets/js/stockfish-19.wasm
