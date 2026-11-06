@@ -2395,7 +2395,7 @@ function drawTally(){
   drawTallyInto($("tally"), tags);
 }
 
-const boardImageUrl = fen => "https://chessboardimage.com/" + fen.split(" ")[0] + ".png";
+const boardImageUrl = fen => "https://chessboardimage.com/" + fen.split(" ")[0].replace(/\//g, "") + ".png";
 
 function buildReport(){
   const side = $("side").value, depth = $("depth").value, strict = $("strict").value;
@@ -2417,7 +2417,7 @@ function buildReport(){
   out.push("4. What Stockfish expected the opponent to do after my moves, and what the opponent's plan or threat was.");
   out.push("");
   out.push("Use the chessboardimage.com markdown links in this report to display the board position when you discuss a move.");
-  out.push("Board image URL format: https://chessboardimage.com/<FEN board field>.png (example: https://chessboardimage.com/rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR.png).");
+  out.push("Board image URL format: https://chessboardimage.com/<FEN board field with slashes removed>.png (example: https://chessboardimage.com/86k186pp81r1RK1NP88.png).");
   out.push("");
   out.push("# Chess Analysis game report");
   out.push("");
@@ -2659,7 +2659,7 @@ function renderGameList(){
   const terms = $("gamefilter").value.trim().toLowerCase().split(/\s+/).filter(Boolean);
   const filtered = (terms.length ? pickerGames.filter(g => terms.every(t => g.search.includes(t))) : pickerGames.slice())
     .sort((a,b) => (b.date || "").localeCompare(a.date || ""));
-  const shown = filtered.slice(0, 200);
+  const shown = filtered;
   $("gamelist").innerHTML = shown.length ? shown.map(g => {
     const title = g.white + (g.whiteElo ? ` (${g.whiteElo})` : "") + " \u2013 " +
       g.black + (g.blackElo ? ` (${g.blackElo})` : "");
@@ -2670,9 +2670,7 @@ function renderGameList(){
   const total = filtered.length;
   $("gamecount").textContent = total === 0
     ? "0 games in " + pickerSource
-    : total > shown.length
-      ? `Showing ${shown.length} of ${total} matching games in ${pickerSource} \u2014 refine the search.`
-      : `${total} matching game${total===1?"":"s"} in ${pickerSource}.`;
+    : `${total} matching game${total===1?"":"s"} in ${pickerSource}.`;
 }
 
 function chooseGame(g){
