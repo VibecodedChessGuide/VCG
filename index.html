@@ -171,10 +171,10 @@ h2{font-size:1rem;margin-bottom:0.4rem}
 .boardgrid{grid-template-columns:1.4667rem 1fr;gap:0.2667rem 0.4rem}
 .evalbar{width:1.4667rem}
 .c-explain,.c-coach{font-size:0.9333rem}
-@media (max-width:47.99rem){
+@media (max-width:63.99rem),(max-height:35.99rem){
   .legend,.open .tip.fine{display:none}
 }
-@media (min-width:48rem){
+@media (min-width:64rem) and (min-height:36rem){
   .wrap{padding:0.8rem 1.0667rem 1.6rem}
   h1{font-size:1.4667rem}
   .play,.rev{grid-template-columns:minmax(0,max(25.3333rem,calc(100vh - 12.6667rem))) minmax(21.3333rem,1fr)}
@@ -184,7 +184,7 @@ h2{font-size:1rem;margin-bottom:0.4rem}
   .c-setup{grid-area:setup}.c-coach{grid-area:coach}.c-tally{grid-area:tally}
   .c-explain{grid-area:explain}.c-moves{grid-area:moves}.c-graph{grid-area:graph}.c-sum{grid-area:sum}
   .plist{max-height:17.3333rem}
-  #reviewPanel>.card,#openPanel{max-width:50.6667rem}
+  #openPanel{max-width:50.6667rem}
 }
 
 /* no blue tap/selection tint on UI */
@@ -219,7 +219,7 @@ button:focus:not(:focus-visible),summary:focus:not(:focus-visible),select:focus:
 #moves .chip.sel{outline:2px solid #81b64c;outline-offset:-1px;background:var(--btn)}
 .c-graph svg{border-radius:0.4rem}
 #rinput textarea{height:4.6667rem}
-@media (min-width:48rem){
+@media (min-width:64rem) and (min-height:36rem){
   .rev{grid-template-areas:"board sum" "board explain" "board graph" "board moves" "board tally"}
   #moves{max-height:15.3333rem}
 }
@@ -244,7 +244,6 @@ button.ghost{background:transparent;border:1px solid var(--line);color:var(--ink
 .gamerow .gsub{display:block;color:var(--muted);font-size:0.8rem;margin-top:0.1333rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .gamecount{font-size:0.8rem;color:var(--muted);margin-top:0.4rem}
 #rinput textarea{height:6.4rem}
-@media (min-width:48rem){ .rin{max-width:50.6667rem} }
 .rin{margin-bottom:0.6667rem}
 #results{margin-top:0.1333rem}
 
@@ -264,21 +263,22 @@ body{min-height:100vh;min-height:100dvh}
 .plist{max-height:min(13.5rem,32vh);max-height:min(13.5rem,32dvh)}
 #moves{max-height:min(13.5rem,32vh);max-height:min(13.5rem,32dvh)}
 .hide{display:none!important}
-@media (min-width:48rem){
-  /* board column follows window height (square board), the side column takes the rest and flexes */
-  .play,.rev{grid-template-columns:minmax(0,min(62%,max(20rem,calc(100vh - 12.7rem)))) minmax(16rem,56rem);
-             grid-template-columns:minmax(0,min(62%,max(20rem,calc(100dvh - 12.7rem)))) minmax(16rem,56rem);
-             justify-content:center;gap:var(--gap)}
+@media (min-width:64rem) and (min-height:36rem){
+  /* board column follows window height (square board); the side column can never be wider than it */
+  .play,.rev{
+    --bw:min(62%,max(20rem,calc(100vh - 12.7rem)));
+    --bw:min(62%,max(20rem,calc(100dvh - 12.7rem)));
+    grid-template-columns:minmax(0,var(--bw)) minmax(16rem,min(56rem,calc(var(--bw) - 1.8667rem),calc(100% - var(--bw) - var(--gap))));
+    justify-content:center;gap:var(--gap)}
   .boardgrid{width:100%}
   .c-board{position:static}
-  #reviewPanel>.card,#openPanel,.rin{max-width:min(100%,56rem)}
-  #reviewPanel>.card.rin{max-width:min(100%,56rem)}
+  #openPanel{max-width:min(100%,56rem)}
   #results{max-width:none}
   #moves{max-height:min(15.3rem,34dvh)}
   .plist{max-height:min(17rem,36dvh)}
 }
 /* keep the board in view while the side panel scrolls, but only when the window is tall enough to hold it */
-@media (min-width:48rem) and (min-height:40rem){
+@media (min-width:64rem) and (min-height:40rem){
   .c-board{position:sticky;top:var(--pad)}
 }
 /* comfortable touch targets */
