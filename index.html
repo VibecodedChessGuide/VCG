@@ -281,6 +281,9 @@ body{min-height:100vh;min-height:100dvh}
 @media (pointer:coarse){
   .tabs button,.row button,.row select,.nav button,.rctl>*,.pctl button,#go,.pn input,.pn select{min-height:2.75rem}
 }
+.fsbtn{flex:none;margin-left:auto;font-size:.8rem;padding:.4rem .6rem;white-space:nowrap}
+body.cssfs .top h1,body.cssfs .top .tabs{display:none}
+body.cssfs .top{justify-content:flex-end}
 </style>
 </head>
 <body>
@@ -293,6 +296,7 @@ body{min-height:100vh;min-height:100dvh}
       <button id="tabOpen">Openings</button>
       <button id="tabEngine">Engine</button>
     </div>
+    <button id="fsbtn" class="ghost fsbtn" type="button" aria-pressed="false" title="Toggle full screen">&#x26F6; Full screen</button>
   </div>
   <details class="card settings">
     <summary>Settings</summary>
@@ -2614,6 +2618,38 @@ $("tabPlay").onclick = () => showTab("play");
 $("tabReview").onclick = () => showTab("review");
 $("tabOpen").onclick = () => showTab("open");
 $("tabEngine").onclick = () => showTab("engine");
+// Full screen toggle (falls back to a focus mode where the API is unavailable, e.g. iPhone Safari)
+const fsBtn = $("fsbtn");
+const fsEl = () => document.fullscreenElement || document.webkitFullscreenElement;
+function fsPaint(){
+  const on = !!fsEl() || document.body.classList.contains("cssfs");
+  fsBtn.textContent = on ? "\u2715 Exit full screen" : "\u26F6 Full screen";
+  fsBtn.setAttribute("aria-pressed", on ? "true" : "false");
+}
+async function fsToggle(){
+  try{
+    if(fsEl()){
+      if(document.exitFullscreen) await document.exitFullscreen();
+      else if(document.webkitExitFullscreen) document.webkitExitFullscreen();
+      document.body.classList.remove("cssfs");
+    }else if(document.body.classList.contains("cssfs")){
+      document.body.classList.remove("cssfs");
+    }else{
+      const el = document.documentElement;
+      if(el.requestFullscreen) await el.requestFullscreen();
+      else if(el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+      else document.body.classList.add("cssfs");
+    }
+  }catch(e){
+    if(!fsEl()) document.body.classList.add("cssfs");
+  }
+  fsPaint();
+}
+fsBtn.onclick = fsToggle;
+for(const ev of ["fullscreenchange","webkitfullscreenchange"]){
+  document.addEventListener(ev, () => { if(!fsEl()) document.body.classList.remove("cssfs"); fsPaint(); });
+}
+fsPaint();
 
 // Cache engine files (cache-first) so big Stockfish builds download only once.
 if("serviceWorker" in navigator && /^https?:$/.test(location.protocol)){
