@@ -1530,8 +1530,8 @@ function addOpenings(list, done){
         o.pgn = pgn; o.toks = toks; o.ply = toks.length; o.fen = fen; o.idx = idx;
         o.hay = (name + " " + eco + " " + o.tag + " " + pgn).toLowerCase();
         OPEN_LIST.push(o);
-        const k = fenKey(fen), cur = OPEN.get(k);
-        if(!cur || cur.idx > idx) OPEN.set(k, o); // first line in the dataset wins, as before
+        const fk = fenKey(fen), cur = OPEN.get(fk);
+        if(!cur || cur.idx > idx) OPEN.set(fk, o); // first line in the dataset wins, as before
       }catch(e){}
     }
     if(i < items.length) setTimeout(step, 0);
