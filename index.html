@@ -354,6 +354,27 @@ body.cssfs .top{justify-content:flex-end}
 .lsel{font:inherit;padding:.5rem;border-radius:.4rem}
 .lseed{width:7rem;font:inherit;padding:.5rem;border:1px solid var(--line);border-radius:.4rem;background:var(--bg);color:var(--ink)}
 @media (max-width:30rem){.tabs button{font-size:.8rem;padding-inline:.15rem}}
+
+/* ---- Opening trainer ---- */
+.seg{display:flex;gap:.4rem;margin-bottom:.8rem}
+.seg button{flex:1}
+.seg button.on{background:#81b64c;border-bottom-color:#45753c;color:#fff}
+#tprog{display:block}
+#phints{margin-top:.4rem}
+.hl{display:flex;gap:.5333rem;align-items:flex-start;margin:.3rem 0;font-size:.9rem;line-height:1.35}
+.hl i{flex:none;width:1.1rem;height:.4rem;border-radius:.2rem;margin-top:.5rem}
+.hl.none{opacity:.7}
+#tstatus.warn{color:var(--warn)}#tstatus.good{color:var(--good)}#tstatus.bad{color:var(--bad)}
+.rrow{display:flex;align-items:center;gap:.5333rem;background:var(--bg);border:1px solid var(--line);border-radius:.4rem;padding:.5333rem .6667rem;margin-bottom:.4rem}
+.rrow .rinfo{flex:1;min-width:0}
+.rrow .rname{display:block;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rrow .rsub{display:block;color:var(--muted);font-size:.8333rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rrow button{padding:.4rem .7rem;font-size:.85rem}
+.rrow .due{color:var(--warn);font-weight:700}
+.rrow .new{color:var(--blue);font-weight:700}
+.tstart{display:flex;flex-wrap:wrap;gap:.4rem;margin:.5333rem 0}
+.tstart button{font-size:.85rem;padding:.4667rem .7rem}
+.tsum{font-weight:700;margin:.2667rem 0 .5333rem}
 </style>
 </head>
 <body data-tab="play">
@@ -432,6 +453,7 @@ body.cssfs .top{justify-content:flex-end}
           <button id="ptoggle">Threats: off</button>
         </div>
         <div class="status" id="pstatus">Loading Stockfish…</div>
+        <div id="phints" class="hide" aria-live="polite"></div>
         <div class="bar" id="pprog"><i id="pprogfill"></i></div>
         <div class="ptxt" id="pprogtxt"></div>
       </div>
@@ -491,6 +513,11 @@ body.cssfs .top{justify-content:flex-end}
 
   <!-- ================= OPENINGS ================= -->
   <div id="openPanel" class="hide">
+    <div class="seg">
+      <button id="omExp" class="on" type="button" aria-pressed="true">Explore</button>
+      <button id="omTrain" type="button" aria-pressed="false">Practice</button>
+    </div>
+    <div id="oexplore">
     <div class="card">
       <h2>Openings explorer</h2>
       <div class="ofilters">
@@ -529,7 +556,45 @@ body.cssfs .top{justify-content:flex-end}
         <button id="oend" aria-label="Last position">⏭</button>
       </div>
       <div class="olines" id="olines"></div>
+      <div class="row">
+        <select id="orepcolor" aria-label="Which side you play">
+          <option value="w">I play White</option>
+          <option value="b">I play Black</option>
+        </select>
+        <button id="orepadd" class="primary" type="button">Add to repertoire</button>
+      </div>
+      <div class="tip" id="orepnote" aria-live="polite"></div>
       <div class="open" id="otext"></div>
+    </div>
+    </div>
+
+    <div id="otrain" class="hide">
+      <div class="card" id="thome">
+        <h2>Opening trainer</h2>
+        <div class="tsum" id="tsum"></div>
+        <div class="row">
+          <button id="tstart" class="primary" type="button">Drill due lines</button>
+          <button id="tall" class="ghost" type="button">Drill all</button>
+          <button id="tfind" class="ghost" type="button">Find openings</button>
+        </div>
+        <div class="tip" id="thint0"></div>
+        <div id="tstarters" class="tstart"></div>
+        <div id="treplist" style="margin-top:.6667rem"></div>
+      </div>
+      <div class="card hide" id="tdrill">
+        <div class="row"><button id="tback" type="button">&larr; Repertoire</button><b id="ttitle"></b></div>
+        <div class="lmeta" id="tmeta"></div>
+        <div class="lwrap"><svg id="tboard" class="bd" viewBox="0 0 800 800" role="img" aria-label="Practice board"></svg></div>
+        <div class="lprog" id="tprog"><i id="tprogfill"></i></div>
+        <div class="status" id="tstatus" aria-live="polite"></div>
+        <div class="row">
+          <button id="thint" type="button">Hint</button>
+          <button id="tshow" type="button">Show move</button>
+          <button id="tretry" class="hide" type="button">Replay line</button>
+          <button id="tnext" class="primary hide" type="button">Next line</button>
+        </div>
+        <div class="open hide" id="tinfo"></div>
+      </div>
     </div>
   </div>
 
@@ -1280,13 +1345,13 @@ function fenFor(toks){
 function addOpenings(list, done){
   buildSides(list);
   const items = list.map((x,idx) => [x[0], x[1], x[2], pgnToks(x[2]), idx]).sort((a,b) => a[3].length - b[3].length);
-  let i = 0;
+  let i = 0, fens = null;
   const step = () => {
     const t0 = performance.now();
     while(i < items.length && performance.now() - t0 < 5){
-      const [eco, name, pgn, toks, idx] = items[i++];
+      const k = i++, [eco, name, pgn, toks, idx] = items[k];
       try{
-        const fen = fenFor(toks), o = classify(eco, name, toks);
+        const fen = (fens && fens[k]) || fenFor(toks), o = classify(eco, name, toks);
         o.pgn = pgn; o.toks = toks; o.ply = toks.length; o.fen = fen; o.idx = idx;
         o.hay = (name + " " + eco + " " + o.tag + " " + pgn).toLowerCase();
         OPEN_LIST.push(o);
@@ -1301,7 +1366,8 @@ function addOpenings(list, done){
       if(done) done();
     }
   };
-  step();
+  // replaying thousands of lines through chess.js happens in a background worker; if that is unavailable, step() does it itself
+  brainCall("fens", {toks: items.map(x => x[3])}).then(f => { fens = Array.isArray(f) ? f : null; step(); });
 }
 const OPEN_CACHE = "chesscoach.openings.v1";
 function readOpenCache(){
@@ -1327,6 +1393,7 @@ async function loadOpenings(){
 }
 let OPEN_ONLINE = false;
 function refreshOpenings(){
+  if(typeof tRender==="function" && !$("otrain").classList.contains("hide") && !tCur) tRender();
   if(pg) updatePlayOpen();
   if(moves.length){ computeBook(); drawOpenList(); updateReviewOpen(); }
   renderOpenList();
@@ -1383,7 +1450,7 @@ function renderOpenList(){
     + (OPEN_ONLINE ? "" : " (Offline: showing a short built-in list.)");
   box.innerHTML = oShown.map((o,i) => `<button data-o="${i}"><span>${esc(o.name)}</span><small>${o.eco}, ${esc(o.tag)}</small></button>`).join("");
 }
-function openDetail(o){ oSel = o; oIdx = o.toks.length; $("odetail").classList.remove("hide"); drawOpenDetail(); $("odetail").scrollIntoView({block:"nearest", behavior:"smooth"}); }
+function openDetail(o){ oSel = o; oIdx = o.toks.length; $("orepcolor").value = (o.side==="Black" || (o.side!=="White" && o.toks.length%2===0 && o.kind==="defence")) ? "b" : "w"; $("orepnote").textContent = ""; $("odetail").classList.remove("hide"); drawOpenDetail(); $("odetail").scrollIntoView({block:"nearest", behavior:"smooth"}); }
 function drawOpenDetail(){
   if(!oSel) return;
   const g = new Chess(); let mv = null;
@@ -1393,6 +1460,7 @@ function drawOpenDetail(){
   $("otext").innerHTML = openLine(oSel, "");
   $("ostart").disabled = $("oprev").disabled = oIdx<=0;
   $("onext").disabled = $("oend").disabled = oIdx>=oSel.toks.length;
+  repSyncAdd();
 }
 const oGo = n => { if(oSel){ oIdx = Math.max(0, Math.min(oSel.toks.length, n)); drawOpenDetail(); } };
 $("olist").onclick = e => { const b = e.target.closest("button[data-o]"); if(b) openDetail(oShown[+b.dataset.o]); };
@@ -1401,6 +1469,49 @@ $("onext").onclick = () => oGo(oIdx+1); $("oend").onclick = () => oGo(1e9);
 let oTimer = 0;
 $("oq").oninput = () => { clearTimeout(oTimer); oTimer = setTimeout(renderOpenList, 150); };
 ["okind","oside","ofirst"].forEach(id => $(id).onchange = renderOpenList);
+
+/* ================= Background worker =================
+   Heavy chess.js work runs on its own thread so the board never stutters. The worker's code is built from the
+   same functions the page uses, so there is one copy of the logic. If a worker cannot start (for example when
+   the page is opened from a file), brainCall resolves undefined and callers use the main-thread path. */
+let brain = null, brainDead = false, brainSeq = 0;
+const brainJobs = new Map();
+function brainSource(chessUrl){
+  const fns = [withTurn, uciToMove, forkTargets, boardFacts, describe, hintTriple, fenFor].map(f => f.toString()).join("\n");
+  return "importScripts(" + JSON.stringify(chessUrl) + ");\n" +
+    "const NAMES=" + JSON.stringify(NAMES) + ",VAL=" + JSON.stringify(VAL) + ",HINT_KINDS=" + JSON.stringify(HINT_KINDS) + ",factsCache=new Map(),prefFen=new Map();\n" +
+    fns + "\n" +
+    "onmessage=function(e){var d=e.data,out={id:d.id};try{" +
+      "if(d.type==='fens'){out.res=d.toks.map(function(t){try{return fenFor(t);}catch(x){return null;}});prefFen.clear();}" +
+      "else if(d.type==='hint'){out.res=hintTriple(d.fen,d.lines);}" +
+    "}catch(x){out.res=undefined;}postMessage(out);};";
+}
+function brainFail(){
+  brainDead = true;
+  try{ if(brain) brain.terminate(); }catch(e){}
+  brain = null;
+  brainJobs.forEach(j => j(undefined)); brainJobs.clear();
+}
+function brainStart(){
+  if(brain || brainDead) return;
+  try{
+    if(typeof Worker==="undefined" || !/^https?:$/.test(location.protocol)) return brainFail();
+    const url = new URL("assets/js/chess.min.js", document.baseURI).href;
+    brain = new Worker(URL.createObjectURL(new Blob([brainSource(url)], {type:"text/javascript"})));
+    brain.onmessage = e => { const j = brainJobs.get(e.data.id); if(j){ brainJobs.delete(e.data.id); j(e.data.res); } };
+    brain.onerror = () => brainFail();
+  }catch(e){ brainFail(); }
+}
+function brainCall(type, payload){
+  brainStart();
+  if(!brain) return Promise.resolve(undefined);
+  return new Promise(res => {
+    const id = ++brainSeq;
+    brainJobs.set(id, res);
+    setTimeout(() => { if(brainJobs.delete(id)) res(undefined); }, 20000);
+    try{ brain.postMessage(Object.assign({id, type}, payload)); }catch(e){ brainJobs.delete(id); res(undefined); }
+  });
+}
 
 /* ================= Judging ================= */
 /* A sacrifice is material given up on purpose: the moved piece (or another piece the
@@ -1682,7 +1793,7 @@ function predInner(ctx){
   const st = predState[ctx];
   if(!st) return "";
   const len = st.steps.length;
-  let h = `<div class="lbl">How this can go wrong: ${len} prediction${len>1?"s":""}</div>`+
+  let h = `<div class="lbl">Predicting this move: ${len} prediction${len>1?"s":""}</div>`+
     `<div class="evals">The engine's most likely line after your move. Blue is you, red is your opponent.</div>`+
     `<div class="pctl">`+
       `<button class="pact" data-ctx="${ctx}" data-act="prev" aria-label="Previous step">&#9664;</button>`+
@@ -2020,7 +2131,7 @@ function renderPlay(boardOnly){
   const fen = pst ? pst.fen : pov ? pov.fen : pg.fen();
   let arrows = [];
   if(fb && fb.arrowsOn) arrows = fb.arrows;
-  else if(hint) arrows = [[hint.slice(0,2), hint.slice(2,4), "var(--arG)", {}]];
+  else if(hint) arrows = hint.items.filter(x => x.uci).map(x => [x.uci.slice(0,2), x.uci.slice(2,4), x.color, {}]);
   if(pst) arrows = predArrow(pst);
   else if(pov) arrows = overviewArrows(pov);
   const facts = showFacts ? boardFacts(fen) : null;
@@ -2033,6 +2144,9 @@ function renderPlay(boardOnly){
   });
   pendingAnim = null; predAnim = null;
   $("pfacts").textContent = facts ? factsText(facts) : "";
+  const ph = $("phints");
+  ph.classList.toggle("hide", !hint);
+  if(hint) setHTML(ph, hint.items.map(x => `<div class="hl${x.uci ? "" : " none"}"><i style="background:${x.color}"></i><span><b>${x.label}:</b> ${esc(x.text)}</span></div>`).join(""));
   if(boardOnly) return;
   const h = pg.history(); let t = "";
   h.forEach((m,i) => { t += (i%2===0 ? (i/2+1)+". " : "") + m + " "; });
@@ -2133,7 +2247,7 @@ async function humanMoveInner(from, to, animate=true){
   predState.play = null;
   const n = predN();
   if((rv.cls!=="good" && rv.cls!=="brilliant" && rv.cls!=="great" && rv.cls!=="book") && n>0 && !pg.game_over()){
-    setP("Working out how this can go wrong…");
+    setP("Predicting this move…");
     const deep = await enqueue(() => analyze(fenAfter, Math.min(14, Math.max(FD, n+2))));
     if(id!==gameId || over) return;
     buildPred("play", fenAfter, (deep && deep.pv.length > after.pv.length) ? deep.pv : after.pv, n, m.color);
@@ -2253,13 +2367,68 @@ $("pcont").onclick = continueGame;
 $("ptoggle").onclick = toggleFacts;
 $("rtoggle").onclick = toggleFacts;
 $("psound").onclick = () => { soundOn = !soundOn; $("psound").textContent = "Sound: " + (soundOn?"on":"off"); if(soundOn) snd("self"); };
+/* Hint = three ideas from the engine's top lines: an attacking move, a defensive move, and a tactic. */
+const HINT_KINDS = [["off","Offensive","var(--arR)"],["def","Defensive","var(--blue)"],["tac","Tactical","var(--arO)"]];
+function hintTriple(fen, lines){
+  const g0 = new Chess(fen), me = g0.turn(), en = me==="w" ? "b" : "w";
+  const f0 = boardFacts(fen), sum = a => a.reduce((t,x) => t + VAL[x.type], 0);
+  const nm = x => NAMES[x.type] + " on " + x.sq;
+  const mine0 = f0.unprotected.filter(x => x.color===me), theirs0 = f0.unprotected.filter(x => x.color===en);
+  const pins0 = f0.pinned.filter(x => x.color===en).length;
+  const top = lines[0].cp, cands = [];
+  lines.forEach((l, rank) => {
+    if(top - l.cp > 120 && !(l.mate>0)) return; // stay close to the engine's best
+    const g = new Chess(fen), m = uciToMove(g, l.mv); if(!m) return;
+    const fa = boardFacts(g.fen());
+    const mine1 = fa.unprotected.filter(x => x.color===me), theirs1 = fa.unprotected.filter(x => x.color===en);
+    const moved = sq => sq===m.from ? m.to : sq;
+    const rescued = mine0.filter(e => !mine1.some(x => x.sq===moved(e.sq)));
+    const targets = theirs1.filter(x => !theirs0.some(e => e.sq===x.sq));
+    const ft = forkTargets(fen, l.mv) || [];
+    const pins = fa.pinned.filter(x => x.color===en).length - pins0;
+    const mate = /#/.test(m.san), check = /[+#]/.test(m.san), capV = m.captured ? VAL[m.captured] : 0;
+    cands.push({l, m, rank, rescued, targets, ft, pins, mate, check, capV,
+      def: sum(mine0) - sum(mine1),
+      off: sum(targets) + (check ? 1 : 0) + capV,
+      tac: (ft.length>=2 ? 4 : 0) + (mate ? 6 : 0) + (check ? 1.5 : 0) + Math.max(0, pins)*2 + (capV>=3 ? capV*0.5 : 0) + (targets.length>=2 ? 2 : 0)});
+  });
+  const pick = (list, key, min) => list.filter(c => c[key] > min).sort((a,b) => b[key]-a[key] || a.rank-b.rank)[0] || null;
+  const tac = pick(cands, "tac", 1.4);
+  const def = pick(cands.filter(c => c!==tac), "def", 0);
+  const off = pick(cands.filter(c => c!==tac && c!==def), "off", 0) || cands.filter(c => c!==tac && c!==def)[0] || null;
+  const tacText = c => c.mate ? c.m.san + " delivers checkmate"
+    : c.ft.length>=2 ? c.m.san + " forks " + c.ft.join(" and ")
+    : c.pins>0 ? c.m.san + " pins an enemy piece to its king"
+    : c.check ? c.m.san + " gives check and forces a reply"
+    : c.m.captured ? c.m.san + " wins the " + NAMES[c.m.captured] : describe(fen, c.l.mv);
+  const out = {
+    off: off ? {uci:off.l.mv, text: off.targets.length ? off.m.san + " attacks the " + off.targets.map(nm).join(" and ") : describe(fen, off.l.mv)}
+             : {text:"No attacking move stands out here."},
+    def: def ? {uci:def.l.mv, text: def.m.san + " rescues your " + def.rescued.map(nm).join(" and ")}
+             : {text: mine0.length ? "Your " + mine0.map(nm).join(" and ") + " is loose, but no good fix is near the top of the engine's list." : "Nothing of yours is under attack right now."},
+    tac: tac ? {uci:tac.l.mv, text:tacText(tac)} : {text:"No forcing tactic here. A quiet plan works best."}
+  };
+  return {items: HINT_KINDS.map(([k, label, color]) => ({label, color, uci: out[k].uci || null, text: out[k].text}))};
+}
 $("phint").onclick = async () => {
-  if(thinking || awaiting || over) return;
-  setP("Asking the engine…");
-  const b = await analysisBefore;
-  if(!b || !b.best){ setP("No hint available right now. Your move."); return; }
-  hint = b.best; if(fb) fb.arrowsOn = false;
-  renderPlay(); setP("Green arrow: the engine's pick. Your move.");
+  if(thinking || awaiting || over || !pg) return;
+  const id = gameId, fen = pg.fen();
+  $("phint").disabled = true; setP("Looking for attacking, defensive and tactical ideas…");
+  let lines = null;
+  try{ lines = await lsearch(fen, 10, 8); }catch(e){}
+  if(id!==gameId || !pg || pg.fen()!==fen) return;
+  if(!lines || !lines.length){
+    const b = await analysisBefore;
+    if(id!==gameId || !pg) return;
+    if(!b || !b.best){ setP("No hint available right now. Your move."); renderPlay(); return; }
+    hint = {items:[{label:"Engine's pick", color:"var(--arG)", uci:b.best, text:describe(fen, b.best)}]};
+  } else {
+    const res = await brainCall("hint", {fen, lines});
+    if(id!==gameId || !pg || pg.fen()!==fen) return;
+    hint = res || hintTriple(fen, lines);
+  }
+  if(fb) fb.arrowsOn = false;
+  renderPlay(); setP("Three ideas for your move. Pick the one that fits the position.");
 };
 $("presign").onclick = () => { if(!pg||over) return; awaiting = null; over = true; thinking = false; renderPlay(); setP("You resigned. Tap Review game to see where it went wrong."); };
 $("preview").onclick = () => {
@@ -3533,6 +3702,330 @@ $("lgo").onclick = () => {
 $("llevelH").onchange = () => { $("llevel").value = $("llevelH").value; };
 $("llevel").onchange = () => { $("llevelH").value = $("llevel").value; };
 lRenderList();
+
+
+/* ================= Opening trainer ================= */
+/* A repertoire is a list of lines you chose. Each line is drilled from move 1: the opponent's moves
+   are played for you and you must find yours. Lines are scheduled with SM-2 spaced repetition. */
+const REP_KEY = "chesscoach.repertoire.v1", DAY = 864e5;
+let REP = [];
+try{
+  const j = JSON.parse(localStorage.getItem(REP_KEY));
+  if(Array.isArray(j)) REP = j.filter(r => r && Array.isArray(r.toks) && r.toks.length && (r.color==="w" || r.color==="b"));
+}catch(e){}
+const repSave = () => { try{ localStorage.setItem(REP_KEY, JSON.stringify(REP)); }catch(e){} };
+const repDue = r => !r.seen || r.due <= Date.now();
+const repId = (o, c) => c + ":" + o.toks.join(" ");
+const sanLine = toks => toks.map((t,i) => (i%2===0 ? (i/2+1) + ". " : "") + t).join(" ");
+const myMoves = r => Math.ceil((r.toks.length - (r.color==="b" ? 1 : 0)) / 2);
+
+function repAdd(o, color){
+  const id = repId(o, color);
+  if(REP.some(r => r.id===id)) return "dup";
+  if(color==="b" && o.toks.length<2) return "short";
+  REP.push({id, name:o.name, eco:o.eco, color, toks:o.toks.slice(), ef:2.5, n:0, int:0, due:0, seen:0, fails:0});
+  repSave(); tBadge();
+  return "ok";
+}
+function repSyncAdd(){
+  if(!oSel) return;
+  const has = REP.some(r => r.id === repId(oSel, $("orepcolor").value));
+  const b = $("orepadd");
+  b.textContent = has ? "In your repertoire" : "Add to repertoire";
+  b.disabled = has;
+}
+$("orepcolor").onchange = repSyncAdd;
+$("orepadd").onclick = () => {
+  if(!oSel) return;
+  const res = repAdd(oSel, $("orepcolor").value);
+  $("orepnote").textContent = res==="short" ? "Black needs a line of at least two moves. Pick a longer line."
+    : res==="ok" ? "Added. Open the Practice tab to drill it." : "Already in your repertoire.";
+  repSyncAdd();
+};
+
+/* SM-2 on whole lines. q: 5 clean, 4 used a hint, 3 one miss, 1 two or more misses. */
+function repGrade(r, q){
+  r.seen = Date.now();
+  if(q<3){ r.n = 0; r.int = 0; r.due = Date.now() + 10*60e3; r.fails = (r.fails||0) + 1; }
+  else {
+    r.n++;
+    r.int = r.n===1 ? 1 : r.n===2 ? 6 : Math.min(365, Math.round(r.int * r.ef));
+    r.due = Date.now() + r.int*DAY;
+  }
+  r.ef = Math.max(1.3, r.ef + 0.1 - (5-q)*(0.08 + (5-q)*0.02));
+  repSave(); tBadge();
+}
+function dueText(r){
+  if(!r.seen) return ["New", "new"];
+  const ms = r.due - Date.now();
+  if(ms<=0) return ["Due now", "due"];
+  if(ms < 36e5) return ["Due in " + Math.max(1, Math.round(ms/6e4)) + " min", ""];
+  if(ms < DAY) return ["Due later today", ""];
+  const d = Math.ceil(ms/DAY);
+  return [d===1 ? "Due tomorrow" : "Due in " + d + " days", ""];
+}
+function tBadge(){
+  const n = REP.filter(repDue).length;
+  $("omTrain").textContent = n ? "Practice (" + n + " due)" : "Practice";
+}
+
+/* ---- starter lines, resolved against the loaded opening list ---- */
+const STARTERS = [["w","Italian Game"],["w","London System"],["w","Queen's Gambit"],["w","Ruy Lopez"],
+                  ["b","Sicilian Defense: Najdorf Variation"],["b","Caro-Kann Defense"],["b","French Defense"],["b","Queen's Gambit Declined"]];
+let starterMemo = [], starterN = -1;
+function resolveStarter(c, q){
+  let best = null;
+  for(const o of OPEN_LIST){
+    if(o.name!==q && !o.name.startsWith(q + ":")) continue;
+    if(c==="b" && o.toks.length<2) continue;
+    const d = Math.abs(o.toks.length - 8);
+    if(!best || d < best.d) best = {o, d};
+  }
+  return best && best.o;
+}
+
+/* ---- home screen ---- */
+function tRender(){
+  tBadge();
+  const due = REP.filter(repDue);
+  $("tsum").textContent = REP.length
+    ? (due.length ? due.length + (due.length===1 ? " line" : " lines") + " due" : "Nothing due") + " · " + REP.length + (REP.length===1 ? " line" : " lines") + " in your repertoire"
+    : "Your repertoire is empty";
+  const st = $("tstart");
+  st.disabled = !due.length;
+  st.textContent = due.length ? "Drill " + due.length + " due" : "Nothing due";
+  $("tall").classList.toggle("hide", !REP.length);
+  st.classList.toggle("hide", !REP.length);
+  const next = REP.filter(r => !repDue(r)).sort((a,b) => a.due - b.due)[0];
+  $("thint0").textContent = !REP.length
+    ? "Add a line below, or open the Explore tab, pick an opening and tap Add to repertoire."
+    : (!due.length && next ? "Next review: " + dueText(next)[0].toLowerCase() + "." : "");
+  // starters only while the repertoire is empty
+  const box = $("tstarters");
+  if(REP.length || !OPEN_LIST.length){ box.innerHTML = ""; }
+  else {
+    if(starterN!==OPEN_LIST.length){ starterMemo = STARTERS.map(([c,q]) => [c, resolveStarter(c,q)]).filter(x => x[1]); starterN = OPEN_LIST.length; }
+    const found = starterMemo;
+    box.innerHTML = found.map(([c,o],i) => `<button class="ghost" type="button" data-st="${i}">+ ${esc(o.name)} <small>${c==="w" ? "White" : "Black"}</small></button>`).join("");
+    box._f = found;
+  }
+  const sorted = REP.slice().sort((a,b) => (repDue(b)-repDue(a)) || a.due - b.due || (a.name < b.name ? -1 : 1));
+  $("treplist").innerHTML = sorted.map(r => {
+    const [t, cls] = dueText(r);
+    return `<div class="rrow"><span class="sw ${r.color}" title="You play ${r.color==="w" ? "White" : "Black"}"></span>`+
+      `<span class="rinfo"><span class="rname">${esc(r.name)}</span><span class="rsub"><span class="${cls}">${t}</span> · ${myMoves(r)} moves to find · ${esc(sanLine(r.toks))}</span></span>`+
+      `<button type="button" data-p="${esc(r.id)}">Drill</button>`+
+      `<button type="button" class="ghost" data-x="${esc(r.id)}" aria-label="Remove ${esc(r.name)}">&#x2715;</button></div>`;
+  }).join("");
+}
+$("tstarters").onclick = e => {
+  const b = e.target.closest("button[data-st]"); if(!b) return;
+  const [c,o] = $("tstarters")._f[+b.dataset.st]; repAdd(o, c); tRender();
+};
+$("treplist").onclick = e => {
+  const p = e.target.closest("button[data-p]"), x = e.target.closest("button[data-x]");
+  if(p){ const r = REP.find(r => r.id===p.dataset.p); if(r) tStartQueue([r]); }
+  if(x){
+    const r = REP.find(r => r.id===x.dataset.x);
+    if(r && confirm("Remove " + r.name + " from your repertoire?")){ REP = REP.filter(q => q!==r); repSave(); tRender(); }
+  }
+};
+$("tstart").onclick = () => { const q = REP.filter(repDue).sort((a,b) => (a.seen?1:0) - (b.seen?1:0) || a.due - b.due); if(q.length) tStartQueue(q); };
+$("tall").onclick = () => { const q = REP.slice(); for(let i=q.length-1;i>0;i--){ const j = Math.floor(Math.random()*(i+1)); [q[i],q[j]] = [q[j],q[i]]; } if(q.length) tStartQueue(q); };
+$("tfind").onclick = () => tSetMode("exp");
+
+function tSetMode(m){
+  $("oexplore").classList.toggle("hide", m!=="exp");
+  $("otrain").classList.toggle("hide", m!=="train");
+  $("omExp").classList.toggle("on", m==="exp"); $("omExp").setAttribute("aria-pressed", m==="exp");
+  $("omTrain").classList.toggle("on", m==="train"); $("omTrain").setAttribute("aria-pressed", m==="train");
+  if(m==="train") tRender();
+  else { tTok++; }
+}
+$("omExp").onclick = () => tSetMode("exp");
+$("omTrain").onclick = () => tSetMode("train");
+
+/* ---- drill ---- */
+let tq = [], tCur = null, tg = null, tIdx = 0, tSel = null, tFlip = false, tMis = 0, tShown = 0, tHints = 0, tHintCnt = 0, tHintFlag = false;
+let tBusy = false, tDone = false, tTok = 0, tLast = null, tAnim = null, tHide = null, tDrag = null, tWasDue = false, tRequeued = new Set(), tCount = 0;
+const tSide = i => i%2===0 ? "w" : "b";
+const tStatus = (t, cls) => { const e = $("tstatus"); e.textContent = t; e.className = "status" + (cls ? " " + cls : ""); };
+let tExpMemo = null;
+function tExpected(){
+  if(!tg || tIdx>=tCur.toks.length) return null;
+  const k = tTok + ":" + tIdx;
+  if(tExpMemo && tExpMemo.k===k) return tExpMemo.m;
+  const c = new Chess(tg.fen()), m = c.move(tCur.toks[tIdx]);
+  tExpMemo = {k, m}; return m;
+}
+function tDraw(){
+  if(!tg){ drawBoard($("tboard"), new Chess().fen(), [], [], {}); return; }
+  const hl = tLast ? [tLast.from, tLast.to] : [], arrows = [];
+  const ex = (!tDone && !tBusy) ? tExpected() : null;
+  if(ex && tHints>=1) hl.push(ex.from);
+  if(ex && tHints>=2) arrows.push([ex.from, ex.to, "var(--arG)"]);
+  const dots = (tSel && !tDone && !tBusy) ? tg.moves({square:tSel, verbose:true}) : [];
+  drawBoard($("tboard"), tg.fen(), arrows, hl, {flip:tFlip, sel:tSel, dots, hideSq:tHide, anim:tAnim});
+  tAnim = null;
+  $("tprogfill").style.width = (tCur ? Math.round(tIdx / tCur.toks.length * 100) : 0) + "%";
+}
+function tStartQueue(list){
+  tq = list.slice(); tRequeued = new Set(); tCount = 0;
+  $("thome").classList.add("hide"); $("tdrill").classList.remove("hide");
+  tNext();
+}
+function tNext(){
+  if(!tq.length){ tBack(); return; }
+  tBegin(tq.shift());
+  $("tdrill").scrollIntoView({block:"nearest", behavior:"smooth"});
+}
+function tBegin(r){
+  const tok = ++tTok;
+  tCur = r; tg = new Chess(); tIdx = 0; tSel = null; tMis = 0; tShown = 0; tHints = 0; tHintCnt = 0; tHintFlag = false; tBusy = true; tDone = false;
+  tLast = null; tAnim = null; tHide = null; tDrag = null; tFlip = r.color==="b"; tWasDue = repDue(r) || tRequeued.has(r.id);
+  $("ttitle").textContent = r.name;
+  $("tmeta").textContent = "You play " + (r.color==="w" ? "White" : "Black") + " · " + myMoves(r) + (myMoves(r)===1 ? " move" : " moves") + " to find" + (tq.length ? " · " + tq.length + " more after this" : "");
+  ["tnext","tretry","tinfo"].forEach(id => $(id).classList.add("hide"));
+  $("thint").classList.remove("hide"); $("tshow").classList.remove("hide");
+  $("thint").disabled = $("tshow").disabled = false;
+  tStatus(r.color==="b" ? "White opens…" : "Your move. Play the first move of this line."); tDraw();
+  tOpp(tok);
+}
+/* play the opponent's moves until it is the user's turn, or the line is over */
+async function tOpp(tok){
+  while(tIdx < tCur.toks.length && tSide(tIdx) !== tCur.color){
+    await lSleep(tIdx===0 ? 450 : 500); if(tok!==tTok) return;
+    const m = tg.move(tCur.toks[tIdx]); if(!m) break;
+    tIdx++; tLast = m; tAnim = {from:m.from, to:m.to}; snd(sndKind(m, false)); tDraw();
+  }
+  if(tok!==tTok) return;
+  if(tIdx >= tCur.toks.length) return tFinish();
+  tBusy = false; tHints = 0; tHintFlag = false; tDraw();
+  if(tIdx>0) tStatus("Your move.");
+}
+function tPlay(m, tok){
+  tg.move({from:m.from, to:m.to, promotion:m.promotion});
+  const mv = tg.history({verbose:true}).slice(-1)[0];
+  tIdx++; tSel = null; tHide = null; tLast = mv; tAnim = {from:mv.from, to:mv.to}; tHints = 0; tHintFlag = false;
+  snd(sndKind(mv, true)); tDraw();
+  if(tIdx >= tCur.toks.length) return tFinish();
+  tBusy = true; tStatus("Correct.", "good"); tOpp(tok);
+}
+function tTry(from, to){
+  if(!tg || tBusy || tDone) return;
+  const tok = tTok, ex = tExpected(); if(!ex) return;
+  if(from===ex.from && to===ex.to) return tPlay(ex, tok);
+  const m = tg.move({from, to, promotion:"q"}); if(!m) return;
+  tMis++; tBusy = true; tSel = null; tHide = null; tLast = m; tAnim = {from:m.from, to:m.to};
+  snd(sndKind(m, true)); tDraw();
+  const known = lookupFen(tg.fen());
+  tStatus(known && known.name!==tCur.name
+    ? "That is a real opening (" + known.name + "), but not the one in this line."
+    : "Not the book move for this line.", "bad");
+  setTimeout(() => {
+    if(tok!==tTok || !tg) return;
+    tg.undo(); tLast = (tIdx>0) ? tg.history({verbose:true}).slice(-1)[0] : null; tBusy = false;
+    if(tMis>=2){ tHints = 2; tStatus("Second miss. The arrow shows the book move.", "bad"); }
+    tDraw();
+  }, 900);
+}
+function tFinish(){
+  tDone = true; tBusy = true; tSel = null; tDraw();
+  const r = tCur, bad = tMis + tShown + 0.5*tHintCnt, q = bad===0 ? 5 : bad<1 ? 4 : bad<1.5 ? 3 : 1;
+  const pl = (n, w) => n + " " + w + (n===1 ? "" : "s");
+  const parts = [];
+  if(tMis) parts.push("missed " + pl(tMis, "move"));
+  if(tShown) parts.push("needed the answer on " + pl(tShown, "move"));
+  if(tHintCnt) parts.push("used a hint on " + pl(tHintCnt, "move"));
+  const what = parts.join(" and ");
+  let msg;
+  if(tWasDue || q<3){
+    repGrade(r, q);
+    if(q<3){
+      msg = "You " + what + ". This line comes back in about 10 minutes.";
+      if(!tRequeued.has(r.id)){ tRequeued.add(r.id); tq.push(r); }
+    } else {
+      msg = (q===5 ? "Clean run. " : "You " + what + ". ") + dueText(r)[0] + ".";
+    }
+  } else {
+    msg = (bad ? "You " + what + "." : "Clean run.") + " Extra drill, so the schedule is unchanged.";
+  }
+  snd("end");
+  tStatus(msg, q>=4 ? "good" : q===3 ? "warn" : "bad");
+  tCount++;
+  const o = lookupFen(tg.fen());
+  const info = $("tinfo");
+  info.innerHTML = o ? openLine(o, "") : `<span class="lbl">Line:</span> ${esc(r.name)}<div class="tip">${esc(sanLine(r.toks))}</div>`;
+  info.classList.remove("hide");
+  $("thint").classList.add("hide"); $("tshow").classList.add("hide");
+  $("tretry").classList.remove("hide");
+  const nx = $("tnext"); nx.classList.remove("hide");
+  nx.textContent = tq.length ? "Next line (" + tq.length + " left)" : "Finish";
+  nx.focus({preventScroll:true});
+}
+function tBack(){
+  tTok++; tCur = null; tg = null; tq = []; tDone = false;
+  $("tdrill").classList.add("hide"); $("thome").classList.remove("hide");
+  tRender();
+}
+$("tback").onclick = tBack;
+$("tnext").onclick = tNext;
+$("tretry").onclick = () => { if(tCur) tBegin(tCur); };
+$("thint").onclick = () => {
+  if(!tg || tBusy || tDone) return;
+  if(!tHintFlag){ tHintFlag = true; tHintCnt++; }
+  tHints = Math.min(2, tHints+1);
+  tStatus(tHints===1 ? "Move the highlighted piece." : "Play the move shown by the arrow.");
+  tDraw();
+};
+$("tshow").onclick = () => {
+  if(!tg || tBusy || tDone) return;
+  const ex = tExpected(); if(!ex) return;
+  const tok = tTok; if(tHintFlag){ tHintFlag = false; tHintCnt--; } tShown++; tHints = 2; tBusy = true; tDraw();
+  tStatus("The book move is " + ex.san + ".");
+  setTimeout(() => { if(tok===tTok && tg && !tDone) tPlay(ex, tok); }, 900);
+};
+
+/* board input: tap-tap or drag */
+const tb = $("tboard");
+tb.addEventListener("pointerdown", e => {
+  if(e.button!==0 || !tg || tBusy || tDone || !tCur) return;
+  const s = sqAt(tb, e, tFlip); if(!s) return;
+  e.preventDefault();
+  if(tSel && tSel!==s && tg.moves({square:tSel, verbose:true}).some(m => m.to===s)){ const f = tSel; tTry(f, s); return; }
+  const p = tg.get(s);
+  if(p && p.color===tCur.color){
+    tDrag = {from:s, wasSel:tSel===s};
+    rc = {svg:tb, r:tb.getBoundingClientRect()};
+    tSel = s; tHide = s; tDraw();
+    const gh = document.createElementNS(NS, "image");
+    gh.setAttribute("id", "tghost"); gh.setAttribute("href", PIECE_URL(p.color, p.type));
+    gh.setAttribute("width", 130); gh.setAttribute("height", 130);
+    gh.style.pointerEvents = "none";
+    const pt = svgPt(tb, e);
+    gh.setAttribute("x", pt.x-65); gh.setAttribute("y", pt.y-65);
+    tb.appendChild(gh);
+    try{ tb.setPointerCapture(e.pointerId); }catch(err){}
+  } else { tSel = null; tDraw(); }
+});
+tb.addEventListener("pointermove", e => {
+  if(!tDrag) return;
+  const gh = tb.querySelector("#tghost"), pt = svgPt(tb, e);
+  if(gh){ gh.setAttribute("x", pt.x-65); gh.setAttribute("y", pt.y-65); }
+});
+function tDropEnd(e, cancel){
+  if(!tDrag) return;
+  const d = tDrag, t = cancel ? null : sqAt(tb, e, tFlip);
+  const gh = tb.querySelector("#tghost"); if(gh) gh.remove();
+  tDrag = null; rc = null; tHide = null;
+  const legal = t && t!==d.from && tg.moves({square:d.from, verbose:true}).some(m => m.to===t);
+  if(legal){ tTry(d.from, t); return; }
+  if(d.wasSel && t===d.from) tSel = null;
+  tDraw();
+}
+tb.addEventListener("pointerup", e => { if(e.button===0) tDropEnd(e, false); });
+tb.addEventListener("pointercancel", e => tDropEnd(e, true));
+tBadge();
 
 /* ================= Tabs ================= */
 function showTab(t){
