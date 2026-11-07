@@ -6,59 +6,59 @@
   FILE MAP — index.html (single-file app; jump straight to the ranges you need)
   Line numbers are absolute in this file. Read only the section you need.
   -------------------------------------------------------------------------
-  HEAD / META / CSS ........................................... 1-603
-    theme tokens + light mode ................................. 73-118
-    base controls + buttons ................................... 120-160
-    app shell: rail, tabs, settings ........................... 161-197
-    page wrapper + sizing ..................................... 198-200
-    board, eval bar, players .................................. 201-241
-    Play tab styles ........................................... 242-282
-    Review tab styles ......................................... 283-337
-    Learn / Openings / Engine styles .......................... 338-397
-    touch target sizes ........................................ 398-402
-    mobile layout (pinned Play board) ......................... 403-440
-    desktop rail layout ....................................... 441-574
-    Friends tab styles (strips, piece-facing switch) .......... 575-602
-  BODY MARKUP ................................................. 605-981
-    rail: tabs, settings, fullscreen .......................... 608-647
-    Play tab .................................................. 648-716
-    Friends tab (two strips, board, piece-facing switch) ...... 717-732
-    Learn tab ................................................. 733-784
-    Openings tab (explorer + trainer) ......................... 785-877
-    Engine tab ................................................ 878-889
-    Review tab ................................................ 890-981
-  JAVASCRIPT (inline) ......................................... 982-4626
-    config: engine paths, bots, boards, levels ................ 983-1057
-    sound effects ............................................. 1058-1113
-    engine worker pool + search ............................... 1114-1353
-    general helpers ........................................... 1354-1387
-    tactics: forks, pins, hanging pieces ...................... 1388-1459
-    openings dataset + explorer ............................... 1460-1753
-    background chess.js worker ................................ 1754-1796
-    move judging / classifications ............................ 1797-1990
-    predictions after bad moves ............................... 1991-2170
-    board drawing (SVG) ....................................... 2171-2348
-    square helpers + right-click marks ........................ 2349-2399
-    Play mode: hints, engine moves ............................ 2400-2746
-      pointer input (tap / drag) .............................. 2589-2746
-    Friends mode (same device, no engine) ..................... 2747-2940
-      piece-facing switch (fRot, fFace, fRotPaint) ............ 2751-2778, 2926-2933
-    Review mode ............................................... 2941-3539
-    board + piece set selection ............................... 3540-3562
-    Learn: seeded engine puzzles .............................. 3563-4225
-      theme tests (mate, tactics, endgames) ................... 3606-3671
-      seeded start positions .................................. 3672-3717
-      side cooperation for puzzle building .................... 3718-3757
-      puzzle difficulty rating ................................ 3758-3852
-      puzzle UI state ......................................... 3853-4085
-      puzzle move checking .................................... 4086-4169
-      puzzle board input ...................................... 4170-4225
-    opening trainer (repertoire drills) ....................... 4226-4548
-      trainer starter lines ................................... 4291-4305
-      trainer home screen ..................................... 4306-4366
-      trainer drill ........................................... 4367-4548
-    tab switching + boot ...................................... 4549-4626
-  SETTINGS POPOVER SCRIPT ..................................... 4627-4636
+  HEAD / META / CSS ............................................ 1-666
+    theme tokens + light mode .................................. 73-118
+    base controls + buttons .................................... 120-160
+    app shell: rail, tabs, settings ............................ 161-197
+    page wrapper + sizing ...................................... 198-200
+    board, eval bar, players ................................... 201-241
+    Play tab styles ............................................ 242-282
+    Review tab styles .......................................... 283-337
+    Learn / Openings / Engine styles ........................... 338-397
+    touch target sizes ......................................... 398-402
+    mobile layout (pinned Play board) .......................... 403-440
+    desktop rail layout ........................................ 441-574
+    Friends tab styles (player rows, clocks, actions) .......... 575-665
+  BODY MARKUP .................................................. 668-1053
+    rail: tabs, settings, fullscreen ........................... 671-710
+    Play tab ................................................... 711-779
+    Friends tab (player rows, board, facing switch) ............ 780-805
+    Learn tab .................................................. 806-857
+    Openings tab (explorer + trainer) .......................... 858-950
+    Engine tab ................................................. 951-962
+    Review tab ................................................. 963-1053
+  JAVASCRIPT (inline) .......................................... 1055-4774
+    config: engine paths, bots, boards, levels ................. 1056-1130
+    sound effects .............................................. 1131-1186
+    engine worker pool + search ................................ 1187-1426
+    general helpers ............................................ 1427-1460
+    tactics: forks, pins, hanging pieces ....................... 1461-1532
+    openings dataset + explorer ................................ 1533-1826
+    background chess.js worker ................................. 1827-1869
+    move judging / classifications ............................. 1870-2063
+    predictions after bad moves ................................ 2064-2243
+    board drawing (SVG) ........................................ 2244-2421
+    square helpers + right-click marks ......................... 2422-2472
+    Play mode: hints, engine moves ............................. 2473-2819
+      pointer input (tap / drag) ............................... 2662-2819
+    Friends mode (same device, no engine) ...................... 2820-3088
+      piece-facing switch (fRot, fFace, fRotPaint) ............. 2826-2852, 3075-3080
+    Review mode ................................................ 3089-3687
+    board + piece set selection ................................ 3688-3710
+    Learn: seeded engine puzzles ............................... 3711-4373
+      theme tests (mate, tactics, endgames) .................... 3754-3819
+      seeded start positions ................................... 3820-3865
+      side cooperation for puzzle building ..................... 3866-3905
+      puzzle difficulty rating ................................. 3906-4000
+      puzzle UI state .......................................... 4001-4233
+      puzzle move checking ..................................... 4234-4317
+      puzzle board input ....................................... 4318-4373
+    opening trainer (repertoire drills) ........................ 4374-4696
+      trainer starter lines .................................... 4439-4453
+      trainer home screen ...................................... 4454-4514
+      trainer drill ............................................ 4515-4696
+    tab switching + boot ....................................... 4697-4774
+  SETTINGS POPOVER SCRIPT ...................................... 4775-4784
   -------------------------------------------------------------------------
   Keep this map updated after edits (regenerate line numbers).
 -->
@@ -572,33 +572,96 @@ body[data-tab="play"] #pnew{padding:.7rem 1rem;font-size:1.08rem}
   .logo{width:1.6rem;height:1.6rem}
 }
 
-/* ---------- PLAY WITH FRIENDS: two players sit opposite each other, device flat between them ---------- */
-#friendsPanel{--FB:max(14rem,min(calc(100vw - 1.2rem),calc(100dvh - var(--topH) - var(--tabH) - var(--sat) - var(--sab) - 17rem)));
-  flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.5rem}
+/* ---------- PLAY WITH FRIENDS: chess.com-style player rows around one board ----------
+   Device lies flat between two players. Each row faces its player (Black's is turned 180deg).
+   Row = square avatar, name, captured pieces with material lead, draw/resign icons, clock.
+   The clock of whoever is to move inverts. Rows keep one height, so the board never jumps. */
+#friendsPanel{
+  --fh:3.6rem;--fm:.3rem;--fsw:2.4rem;
+  --fchrome:calc(2*var(--fh) + 2*var(--fm) + var(--fsw) + .4rem);
+  --FB:max(13rem,min(calc(100vw - 1.2rem),calc(100dvh - var(--topH) - var(--tabH) - var(--sat) - var(--sab) - .7rem - var(--fchrome))));
+  --pencil:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3 17.25V21h3.75L17.81 9.94l-3.75-3.75zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75z'/%3E%3C/svg%3E");
+  --crown:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%235a3d00' d='M3 8l4.5 4L12 5l4.5 7L21 8l-2 11H5z'/%3E%3C/svg%3E");
+  flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
 #friendsPanel.hide{display:none}
-#friendsPanel .bd{width:var(--FB);flex:none;touch-action:none}
-.fstrip{width:var(--FB);flex:none;background:var(--panel);border-radius:.7rem;padding:.45rem .6rem .55rem;display:flex;flex-direction:column;gap:.35rem}
-.fstrip.top{transform:rotate(180deg)}
+#friendsPanel .bd{width:var(--FB);flex:none;touch-action:none;border-radius:.2rem}
+
+.fstrip{container-type:inline-size;width:var(--FB);height:var(--fh);flex:none;display:flex;align-items:center;gap:.6rem;color:var(--ink)}
+.fstrip.top{transform:rotate(180deg);margin-bottom:var(--fm)}
+.fstrip.bot{margin-top:var(--fm)}
 #friendsPanel.norot .fstrip.top{transform:none}
-.fhead{display:flex;align-items:center;gap:.5rem;min-width:0}
-.fhead .sw{width:1.6rem;height:1.6rem;flex:none}
-.fname{flex:1;min-width:0;padding:.35rem .55rem;font-weight:800;font-size:1rem;background:var(--deep)}
-.ftag{flex:none;font-size:.72rem;font-weight:800;color:var(--good);white-space:nowrap;visibility:hidden}
-.fstrip.turn .ftag{visibility:visible}
-.fstrip.turn{box-shadow:inset 0 0 0 2px var(--good)}
-.frot{width:var(--FB);flex:none;display:flex;align-items:center;justify-content:space-between;gap:.8rem;
-  background:var(--panel);color:var(--soft);border:0;border-radius:.3rem;padding:.5rem .7rem;font-size:.88rem;font-weight:700;text-align:left}
-.frot:active:not(:disabled){transform:none}
-.frot i{flex:none;position:relative;width:2.4rem;height:1.3rem;background:var(--raise);border-radius:.2rem;transition:background .15s}
-.frot i::after{content:"";position:absolute;top:.15rem;left:.15rem;width:1rem;height:1rem;background:#fff;border-radius:.15rem;transition:transform .15s}
-.frot[aria-pressed="true"] i{background:var(--good)}
-.frot[aria-pressed="true"] i::after{transform:translateX(1.1rem)}
-.fmsg{font-size:.85rem;font-weight:700;color:var(--soft);line-height:1.3;min-height:0}
+
+/* avatar: the king on a board square */
+.fava{position:relative;flex:none;width:2.7rem;height:2.7rem;border-radius:.3rem;display:grid;place-items:center;box-shadow:inset 0 0 0 1px rgba(0,0,0,.25)}
+.fava.w{background:var(--fsqL,var(--sqL))}
+.fava.b{background:var(--fsqD,var(--sqD))}
+.fava img{display:block;width:94%;height:94%;pointer-events:none}
+.fava.noimg img{display:none}
+.fava.noimg::before{content:"\265A\FE0E";font-size:1.8rem;line-height:1;color:#10151a}
+.fava.b.noimg::before{color:#f4f3ee}
+.fava.crown::after{content:"";position:absolute;right:-.35rem;top:-.4rem;width:1.2rem;height:1.2rem;border-radius:50%;
+  background:#f7c631 var(--crown) center/62% no-repeat;box-shadow:0 0 0 2px var(--bg)}
+
+/* name + captured pieces */
+.ftext{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:.15rem}
+.fnamew{display:flex;align-items:center;gap:.35rem;min-width:0;max-width:100%;cursor:text}
+.fnamew::after{content:"";flex:none;width:.8rem;height:.8rem;background:var(--muted);opacity:.7;
+  -webkit-mask:var(--pencil) center/contain no-repeat;mask:var(--pencil) center/contain no-repeat}
+.fnamew:focus-within::after{opacity:0}
+.fname{flex:0 1 auto;width:6.5ch;min-width:3ch;max-width:100%;padding:.05rem 0;margin:0;border:0;border-bottom:2px solid transparent;border-radius:0;
+  background:transparent;color:var(--ink);font-size:1.02rem;font-weight:800;line-height:1.2;text-overflow:ellipsis}
+.fname::placeholder{color:var(--ink);opacity:1;font-weight:800}
+.fname:focus-visible{outline:0;border-bottom-color:var(--good)}
+.fcap{height:1.05rem;display:flex;align-items:center;font-size:.74rem;font-weight:800;color:var(--muted);white-space:nowrap;overflow:hidden}
+.fcap:empty{display:none}
+.fcap .g{display:inline-flex;align-items:center;margin-right:.35rem}
+.fcap .g>*{flex:none;width:1.05rem;height:1.05rem;margin-right:-.45rem}
+.fcap .g>*:last-child{margin-right:0}
+.fcap .gl{display:grid;place-items:center;font-size:.95rem;line-height:1;color:var(--soft)}
+.fcap .lead{margin-left:.1rem}
+.fcap .chk{margin-left:.5rem;color:var(--bad)}
+.fmsg{min-width:0}
 .fmsg:empty{display:none}
-.fbtns{display:flex;gap:.45rem;flex-wrap:wrap}
-.fbtns button{flex:1 1 0;min-width:4.5rem;padding:.55rem .4rem;font-size:.9rem}
+.fmsg b,.fmsg span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fmsg b{font-size:1.05rem;font-weight:800;line-height:1.2}
+.fmsg span{font-size:.78rem;font-weight:700;line-height:1.25;color:var(--muted)}
+.fstrip.say .fnamew,.fstrip.say .fcap,.fstrip.say .fclock{display:none}
+.fstrip.say:not(.over) .fava{display:none}
+
+/* icon actions */
+.fbtns{flex:none;display:flex;align-items:center;gap:.25rem}
+.fbtns .ic{display:grid;place-items:center;width:2.4rem;height:2.4rem;padding:0;border:0;border-radius:.4rem;background:transparent;color:var(--muted);font-size:1.25rem;font-weight:800;line-height:1}
+.fbtns .ic:hover:not(:disabled){filter:none;background:var(--raise);color:var(--ink)}
+.fbtns .ic:active:not(:disabled){transform:scale(.92);border-bottom-width:0}
+.fbtns .ic svg{width:1.3rem;height:1.3rem;fill:none;stroke:currentColor;stroke-width:2.1;stroke-linecap:round;stroke-linejoin:round}
+.fbtns .arm{width:auto;padding:0 .75rem;border-radius:.4rem;background:var(--bad);color:#fff;font-size:.85rem}
+.fbtns .arm:hover:not(:disabled){background:var(--bad);color:#fff}
+.fstrip.say .fbtns{gap:.45rem}
+.fstrip.say .fbtns button:not(.ic){font-size:.88rem;padding:.5rem .85rem;white-space:nowrap}
+.fstrip.say .fbtns .pc{width:2.9rem;height:2.9rem;padding:0;display:grid;place-items:center;font-size:1.7rem}
+.fstrip.say .fbtns .pc img{width:90%;height:90%;display:block;pointer-events:none}
+.fstrip.say .fbtns .pc.x{font-size:1.2rem}
+
+/* clock: counts the time each player has used; inverts for whoever is to move */
+.fclock{flex:none;min-width:4.7rem;height:2.7rem;padding:0 .7rem;border-radius:.3rem;display:grid;place-items:center;
+  background:var(--panel);color:var(--muted);font:800 1.4rem/1 "Segoe UI",system-ui,sans-serif;font-variant-numeric:tabular-nums;
+  transition:background-color .2s,color .2s}
+.fstrip.turn .fclock{background:var(--ink);color:var(--bg)}
+@container (max-width:21rem){.fclock{min-width:4rem;font-size:1.2rem;padding:0 .5rem}}
+
+/* switch under the board */
+.frot{width:var(--FB);height:var(--fsw);flex:none;margin-top:.4rem;display:flex;align-items:center;justify-content:space-between;gap:.8rem;
+  background:none;border:0;border-radius:.4rem;padding:0 .1rem;color:var(--muted);font-size:.82rem;font-weight:700;text-align:left}
+.frot:hover:not(:disabled){filter:none;color:var(--soft)}
+.frot:active:not(:disabled){transform:none;border-bottom-width:0}
+.frot i{flex:none;position:relative;width:2.5rem;height:1.45rem;border-radius:1rem;box-shadow:inset 0 0 0 2px var(--muted);transition:background-color .15s,box-shadow .15s}
+.frot i::after{content:"";position:absolute;top:.275rem;left:.3rem;width:.9rem;height:.9rem;background:var(--muted);border-radius:50%;transition:transform .15s,background-color .15s}
+.frot[aria-pressed="true"] i{background:var(--good);box-shadow:none}
+.frot[aria-pressed="true"] i::after{background:#fff;left:.2rem;top:.2rem;width:1.05rem;height:1.05rem;transform:translateX(1.05rem)}
+@media (pointer:coarse){.fbtns .ic{width:2.7rem;height:2.7rem}}
+
 @media (min-width:56rem),(orientation:landscape) and (max-height:34rem) and (min-width:32rem){
-  #friendsPanel{--FB:max(15rem,min(calc(100vw - var(--rail) - 2*var(--pad) - 1rem),calc(100dvh - 2*var(--pad) - 17rem)))}
+  #friendsPanel{--FB:max(13rem,min(calc(100vw - var(--rail) - 2*var(--pad) - 1rem),calc(100dvh - 2*var(--pad) - var(--fchrome))))}
 }
 </style>
 </head>
@@ -716,16 +779,26 @@ body[data-tab="play"] #pnew{padding:.7rem 1rem;font-size:1.08rem}
 
   <!-- ================= PLAY WITH FRIENDS (same device, players face each other, no engine) ================= -->
   <div id="friendsPanel" class="hide">
-    <div class="fstrip top" id="fs-b">
-      <div class="fhead"><span class="sw b"></span><input class="fname" id="fnb" type="text" maxlength="20" placeholder="Black" autocomplete="off" aria-label="Black player name"><span class="ftag">to move</span></div>
-      <div class="fmsg" id="fm-b"></div>
+    <div class="fstrip top" id="fs-b" role="group" aria-label="Black player">
+      <span class="fava b" id="fa-b" aria-hidden="true"><img alt=""></span>
+      <div class="ftext">
+        <label class="fnamew"><input class="fname" id="fnb" type="text" maxlength="20" placeholder="Black" autocomplete="off" autocapitalize="words" spellcheck="false" enterkeyhint="done" aria-label="Black player name"></label>
+        <div class="fcap" id="fc-b"></div>
+        <div class="fmsg" id="fm-b"></div>
+      </div>
       <div class="fbtns" id="fb-b"></div>
+      <div class="fclock" id="fk-b" aria-hidden="true">0:00</div>
     </div>
     <svg id="fboard" class="bd" viewBox="0 0 800 800" role="img" aria-label="Chess board"></svg>
-    <div class="fstrip bot" id="fs-w">
-      <div class="fhead"><span class="sw w"></span><input class="fname" id="fnw" type="text" maxlength="20" placeholder="White" autocomplete="off" aria-label="White player name"><span class="ftag">to move</span></div>
-      <div class="fmsg" id="fm-w"></div>
+    <div class="fstrip bot" id="fs-w" role="group" aria-label="White player">
+      <span class="fava w" id="fa-w" aria-hidden="true"><img alt=""></span>
+      <div class="ftext">
+        <label class="fnamew"><input class="fname" id="fnw" type="text" maxlength="20" placeholder="White" autocomplete="off" autocapitalize="words" spellcheck="false" enterkeyhint="done" aria-label="White player name"></label>
+        <div class="fcap" id="fc-w"></div>
+        <div class="fmsg" id="fm-w"></div>
+      </div>
       <div class="fbtns" id="fb-w"></div>
+      <div class="fclock" id="fk-w" aria-hidden="true">0:00</div>
     </div>
     <button type="button" id="frot" class="frot" role="switch" aria-pressed="false" title="Turn every piece to face whoever is to move. Handy when the phone lies flat between two players."><span>Pieces face the player to move</span><i></i></button>
   </div>
@@ -2784,34 +2857,107 @@ function fRender(boardOnly){
   fAnim = null; fFace(); fRotPaint();
   if(!boardOnly) fStrips();
 }
+const fEsc = s => String(s).replace(/[&<>"]/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[ch]));
+const F_GLYPH = {p:"\u265F", n:"\u265E", b:"\u265D", r:"\u265C", q:"\u265B"};
+const F_VAL = {p:1, n:3, b:3, r:5, q:9};
+const F_ICON = {
+  offer: '<span aria-hidden="true">\u00bd</span>',
+  resign: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 21V4M6 4.5h12l-3 4 3 4H6"/></svg>',
+  review: '<svg viewBox="0 0 24 24" aria-hidden="true" width="16" height="16" style="width:1rem;height:1rem;vertical-align:-.18rem;margin-right:.35rem;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l5 5"/></svg>'
+};
+const F_IMG_FALLBACK = t => `onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'gl',textContent:'${F_GLYPH[t]}\uFE0E'}))"`;
 function fBtn(act, label, cls){
-  const armed = fArmed===act;
-  return `<button type="button" data-act="${act}"${cls||armed ? ` class="${armed ? "primary" : cls}"` : ""}>${armed ? "Tap again" : label}</button>`;
+  return `<button type="button" data-act="${act}"${cls ? ` class="${cls}"` : ""}>${label}</button>`;
 }
+function fIconBtn(act, label){
+  if(fArmed===act) return `<button type="button" class="ic arm" data-act="${act}" aria-label="${label}: tap again to confirm">${label}?</button>`;
+  return `<button type="button" class="ic" data-act="${act}" aria-label="${label}" title="${label}">${F_ICON[act]}</button>`;
+}
+function fPieceBtn(c, t, name){
+  return `<button type="button" class="pc" data-act="p:${t}" aria-label="${name}"><img alt="" src="${PIECE_URL(c, t)}" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'${F_GLYPH[t]}\uFE0E'}))"></button>`;
+}
+function fSizeName(inp){
+  const n = Math.max(inp.value.length, (inp.placeholder||"").length, 3);
+  inp.style.width = (n + .6) + "ch";
+}
+function fAvatars(){
+  ["w","b"].forEach(c => {
+    const box = $("fa-" + c), im = box.querySelector("img"), u = PIECE_URL(c, "k");
+    if(im.dataset.u === u) return;
+    im.dataset.u = u; box.classList.remove("noimg");
+    im.onerror = () => box.classList.add("noimg");
+    im.src = u;
+  });
+}
+/* captured pieces + material lead, read from the position so undone or promoted games stay right */
+function fMaterial(){
+  const start = {p:8, n:2, b:2, r:2, q:1}, have = {w:{p:0,n:0,b:0,r:0,q:0}, b:{p:0,n:0,b:0,r:0,q:0}};
+  fg.fen().split(" ")[0].split("").forEach(ch => {
+    const t = ch.toLowerCase(); if(!(t in F_VAL)) return;
+    have[ch===t ? "b" : "w"][t]++;
+  });
+  const out = {}; let score = {w:0, b:0};
+  ["w","b"].forEach(c => {
+    score[c] = Object.keys(F_VAL).reduce((a,t) => a + F_VAL[t]*have[c][t], 0);
+    out[c] = {};   // what color c has taken, i.e. the opponent's missing pieces
+  });
+  ["w","b"].forEach(c => { const o = fOpp(c); Object.keys(F_VAL).forEach(t => { out[c][t] = Math.max(0, start[t] - have[o][t]); }); });
+  return {taken: out, lead: {w: score.w - score.b, b: score.b - score.w}};
+}
+function fCapHtml(c, mat){
+  const o = fOpp(c);
+  let h = ["p","n","b","r","q"].map(t => {
+    const k = mat.taken[c][t]; if(!k) return "";
+    return `<span class="g">${Array.from({length:k}, () => `<img alt="" src="${PIECE_URL(o, t)}" ${F_IMG_FALLBACK(t)}>`).join("")}</span>`;
+  }).join("");
+  if(mat.lead[c] > 0) h += `<span class="lead">+${mat.lead[c]}</span>`;
+  return h;
+}
+/* clocks count up: the time each player has used */
+let fClock = {w:0, b:0, last:0};
+const fFmt = ms => { const t = Math.floor(ms/1000), h = Math.floor(t/3600), m = Math.floor(t%3600/60), s = t%60;
+  return h ? `${h}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}` : `${m}:${String(s).padStart(2,"0")}`; };
+function fClockPaint(){ ["w","b"].forEach(c => { const el = $("fk-" + c); if(el) el.textContent = fFmt(fClock[c]); }); }
+function fClockTick(){
+  const now = performance.now(), dt = Math.min(1000, now - fClock.last); fClock.last = now;
+  if(!fg || fOver || $("friendsPanel").classList.contains("hide")) return;
+  fClock[fg.turn()] += dt; fClockPaint();
+}
+setInterval(fClockTick, 250);
 function fStrips(){
   if(!fg) return;
-  const n = fNames(), mover = fOver ? null : fg.turn();
+  fAvatars(); fClockPaint();
+  const n = fNames(), mover = fOver ? null : fg.turn(), mat = fMaterial();
+  const winner = fOver ? (fResult==="1-0" ? "w" : fResult==="0-1" ? "b" : null) : null;
   ["w","b"].forEach(c => {
-    const el = $("fs-" + c), me = n[c], opp = n[fOpp(c)];
-    el.classList.toggle("turn", mover===c);
-    let msg = "", btns = "";
+    const el = $("fs-" + c), opp = n[fOpp(c)];
+    let say = false, msg = "", btns = "";
     if(fOver){
-      msg = fMsg;
-      btns = (fg.history().length ? fBtn("review", "Review game", "primary") : "") + fBtn("new", "New game");
+      say = true;
+      const i = fMsg.indexOf(". ");
+      const head = i<0 ? fMsg : fMsg.slice(0, i+1), rest = i<0 ? "" : fMsg.slice(i+2);
+      if(winner===c) msg = `<b>You win</b><span>${fEsc(head.replace(/\.$/, ""))}</span>`;
+      else msg = `<b>${fEsc(head)}</b>` + (rest ? `<span>${fEsc(rest)}</span>` : "");
+      btns = (fg.history().length ? fBtn("review", F_ICON.review + "Review", "primary") : "") + fBtn("new", "New");
     } else if(fPromo && fg.turn()===c){
-      msg = "Promote to:";
-      btns = fBtn("p:q","Queen") + fBtn("p:r","Rook") + fBtn("p:b","Bishop") + fBtn("p:n","Knight") + fBtn("p:x","Cancel","ghost");
+      say = true; msg = `<b>Promote to</b>`;
+      btns = fPieceBtn(c,"q","Queen") + fPieceBtn(c,"r","Rook") + fPieceBtn(c,"b","Bishop") + fPieceBtn(c,"n","Knight") +
+             `<button type="button" class="pc x" data-act="p:x" aria-label="Cancel">\u2715</button>`;
     } else if(fOffer===fOpp(c)){
-      msg = opp + " offers a draw.";
-      btns = fBtn("accept","Accept","primary") + fBtn("decline","Decline");
+      say = true; msg = `<b>Draw?</b><span>${fEsc(opp)} offers</span>`;
+      btns = fBtn("accept", "Accept", "primary") + fBtn("decline", "Decline");
     } else if(fOffer===c){
-      msg = "Draw offer sent.";
-      btns = fBtn("cancel","Cancel offer");
+      say = true; msg = `<b>Draw offered</b>`;
+      btns = fBtn("cancel", "Cancel");
     } else {
-      if(mover===c && fg.in_check()) msg = "You are in check.";
-      btns = fBtn("offer","Offer draw") + fBtn("resign","Resign");
+      btns = fIconBtn("offer", "Offer draw") + fIconBtn("resign", "Resign");
     }
-    $("fm-" + c).textContent = msg;
+    el.classList.toggle("turn", mover===c);
+    el.classList.toggle("say", say);
+    el.classList.toggle("over", fOver);
+    $("fa-" + c).classList.toggle("crown", winner===c);
+    $("fc-" + c).innerHTML = fCapHtml(c, mat) + (mover===c && fg.in_check() ? `<span class="chk">Check</span>` : "");
+    $("fm-" + c).innerHTML = msg;
     $("fb-" + c).innerHTML = btns;
   });
 }
@@ -2819,6 +2965,7 @@ function fStart(){
   fDisarm();
   fg = new Chess(); fSel = null; fLast = null; fOver = false; fHide = null; fAnim = null;
   fPromo = null; fResult = null; fMsg = ""; fOffer = null; fDrag = null; rc = null;
+  fClock = {w:0, b:0, last:performance.now()};
   snd("start"); fRender();
 }
 function fEnd(res, msg, kind){
@@ -2935,7 +3082,8 @@ fRotPaint();
   $("fb-" + c).addEventListener("click", e => {
     const b = e.target.closest("button[data-act]"); if(b) fAct(c, b.dataset.act);
   });
-  $("fn" + c).addEventListener("input", () => { if(fg) fStrips(); });
+  $("fn" + c).addEventListener("input", e => { fSizeName(e.target); if(fg) fStrips(); });
+  fSizeName($("fn" + c));
 });
 
 /* ================= REVIEW MODE ================= */
