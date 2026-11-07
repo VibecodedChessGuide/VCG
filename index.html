@@ -6,59 +6,60 @@
   FILE MAP — index.html (single-file app; jump straight to the ranges you need)
   Line numbers are absolute in this file. Read only the section you need.
   -------------------------------------------------------------------------
-  HEAD / META / CSS ............................................ 1-666
-    theme tokens + light mode .................................. 73-118
-    base controls + buttons .................................... 120-160
-    app shell: rail, tabs, settings ............................ 161-197
-    page wrapper + sizing ...................................... 198-200
-    board, eval bar, players ................................... 201-241
-    Play tab styles ............................................ 242-282
-    Review tab styles .......................................... 283-337
-    Learn / Openings / Engine styles ........................... 338-397
-    touch target sizes ......................................... 398-402
-    mobile layout (pinned Play board) .......................... 403-440
-    desktop rail layout ........................................ 441-574
-    Friends tab styles (player rows, clocks, actions) .......... 575-665
-  BODY MARKUP .................................................. 668-1053
-    rail: tabs, settings, fullscreen ........................... 671-710
-    Play tab ................................................... 711-779
-    Friends tab (player rows, board, facing switch) ............ 780-805
-    Learn tab .................................................. 806-857
-    Openings tab (explorer + trainer) .......................... 858-950
-    Engine tab ................................................. 951-962
-    Review tab ................................................. 963-1053
-  JAVASCRIPT (inline) .......................................... 1055-4774
-    config: engine paths, bots, boards, levels ................. 1056-1130
-    sound effects .............................................. 1131-1186
-    engine worker pool + search ................................ 1187-1426
-    general helpers ............................................ 1427-1460
-    tactics: forks, pins, hanging pieces ....................... 1461-1532
-    openings dataset + explorer ................................ 1533-1826
-    background chess.js worker ................................. 1827-1869
-    move judging / classifications ............................. 1870-2063
-    predictions after bad moves ................................ 2064-2243
-    board drawing (SVG) ........................................ 2244-2421
-    square helpers + right-click marks ......................... 2422-2472
-    Play mode: hints, engine moves ............................. 2473-2819
-      pointer input (tap / drag) ............................... 2662-2819
-    Friends mode (same device, no engine) ...................... 2820-3088
-      piece-facing switch (fRot, fFace, fRotPaint) ............. 2826-2852, 3075-3080
-    Review mode ................................................ 3089-3687
-    board + piece set selection ................................ 3688-3710
-    Learn: seeded engine puzzles ............................... 3711-4373
-      theme tests (mate, tactics, endgames) .................... 3754-3819
-      seeded start positions ................................... 3820-3865
-      side cooperation for puzzle building ..................... 3866-3905
-      puzzle difficulty rating ................................. 3906-4000
-      puzzle UI state .......................................... 4001-4233
-      puzzle move checking ..................................... 4234-4317
-      puzzle board input ....................................... 4318-4373
-    opening trainer (repertoire drills) ........................ 4374-4696
-      trainer starter lines .................................... 4439-4453
-      trainer home screen ...................................... 4454-4514
-      trainer drill ............................................ 4515-4696
-    tab switching + boot ....................................... 4697-4774
-  SETTINGS POPOVER SCRIPT ...................................... 4775-4784
+  HEAD / META / CSS ............................................ 1-673
+    theme tokens + light mode .................................. 74-120
+    base controls + buttons .................................... 121-161
+    app shell: rail, tabs, settings ............................ 162-198
+    page wrapper + sizing ...................................... 199-201
+    board, eval bar, players ................................... 202-242
+    Play tab styles ............................................ 243-283
+    Review tab styles .......................................... 284-344
+    Learn / Openings / Engine styles ........................... 345-404
+    touch target sizes ......................................... 405-409
+    mobile layout (pinned Play board) .......................... 410-447
+    desktop rail layout ........................................ 448-581
+    Friends tab styles (player rows, clocks, actions) .......... 582-672
+  BODY MARKUP .................................................. 675-1069
+    rail: tabs, settings, fullscreen ........................... 678-717
+    Play tab ................................................... 718-786
+    Friends tab (player rows, board, facing switch) ............ 787-812
+    Learn tab .................................................. 813-864
+    Openings tab (explorer + trainer) .......................... 865-957
+    Engine tab ................................................. 958-969
+    Review tab ................................................. 970-1069
+  JAVASCRIPT (inline) .......................................... 1071-5022
+    config: engine paths, bots, boards, levels ................. 1072-1146
+    sound effects .............................................. 1147-1202
+    engine worker pool + search ................................ 1203-1442
+    general helpers ............................................ 1443-1476
+    tactics: forks, pins, hanging pieces ....................... 1477-1548
+    openings dataset + explorer ................................ 1549-1842
+    background chess.js worker ................................. 1843-1885
+    move judging / classifications ............................. 1886-2079
+    predictions after bad moves ................................ 2080-2259
+    board drawing (SVG) ........................................ 2260-2437
+    square helpers + right-click marks ......................... 2438-2488
+    Play mode: hints, engine moves ............................. 2489-2835
+      pointer input (tap / drag) ............................... 2678-2835
+    Friends mode (same device, no engine) ...................... 2836-3104
+      piece-facing switch (fRot, fFace, fRotPaint) ............. 2842-2868, 3091-3096
+    Review mode ................................................ 3105-3897
+      chess.com link loader + compressed share links ........... 3705-3897
+    board + piece set selection ................................ 3898-3920
+    Learn: seeded engine puzzles ............................... 3921-4583
+      theme tests (mate, tactics, endgames) .................... 3964-4029
+      seeded start positions ................................... 4030-4075
+      side cooperation for puzzle building ..................... 4076-4115
+      puzzle difficulty rating ................................. 4116-4210
+      puzzle UI state .......................................... 4211-4443
+      puzzle move checking ..................................... 4444-4527
+      puzzle board input ....................................... 4528-4583
+    opening trainer (repertoire drills) ........................ 4584-4906
+      trainer starter lines .................................... 4649-4663
+      trainer home screen ...................................... 4664-4724
+      trainer drill ............................................ 4725-4906
+    tab switching + boot ....................................... 4907-5022
+  SETTINGS POPOVER SCRIPT ...................................... 5023-5032
   -------------------------------------------------------------------------
   Keep this map updated after edits (regenerate line numbers).
 -->
@@ -313,7 +314,13 @@ body.cssfs .tabs+*{}
 .pill{display:inline-flex;align-items:center;gap:.45rem;color:var(--muted);white-space:nowrap}
 .pill b{color:var(--ink);min-width:1.1rem;text-align:right;order:-1}
 .pill i{width:.7rem;height:.7rem;border-radius:50%;display:inline-block;flex:none;order:-2}
-#copyreport{width:100%;margin-top:.8rem}
+#copyreport,#sharelink{width:100%;margin-top:.8rem}
+#sharelink{margin-top:.5rem}
+.linkfield{margin-bottom:.1rem}
+.linkrow{display:flex;gap:.5rem}
+.linkrow input{flex:1;min-width:0}
+.linkrow button{flex:none;padding:.55rem .95rem}
+@media (pointer:coarse){.linkrow input,.linkrow button{min-height:2.75rem}}
 #graph{width:100%;height:auto;display:block;cursor:pointer;border-radius:.5rem}
 #moves{display:block;max-height:min(15rem,34dvh);overflow-y:auto;padding:0}
 .mrow{display:grid;grid-template-columns:2.2rem 1fr 1fr;gap:.25rem;margin-bottom:.25rem;align-items:center}
@@ -968,12 +975,20 @@ body[data-tab="play"] #pnew{padding:.7rem 1rem;font-size:1.08rem}
         <button id="redit" class="ghost hide">Edit</button>
       </div>
       <div id="rform">
+        <div class="field linkfield">
+          <span>Chess.com game link</span>
+          <div class="linkrow">
+            <input id="chesslink" type="url" inputmode="url" placeholder="Paste a chess.com game or review link" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Chess.com game link">
+            <button id="chessload" class="ghost" type="button">Load</button>
+          </div>
+          <input id="chessuser" type="text" placeholder="Chess.com username (optional, more reliable)" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Chess.com username">
+        </div>
         <textarea id="pgn" placeholder="Paste a PGN here, e.g. 1. e4 e5 2. Nf3 Nc6 …" spellcheck="false"></textarea>
         <div class="rctl">
           <select id="side" aria-label="Whose mistakes">
-            <option value="w">I played White</option>
-            <option value="b">I played Black</option>
-            <option value="wb">Review both</option>
+            <option value="w">White</option>
+            <option value="b">Black</option>
+            <option value="wb">Both sides</option>
           </select>
           <select id="depth" aria-label="Search depth">
             <option value="8">Fast</option>
@@ -1009,7 +1024,7 @@ body[data-tab="play"] #pnew{padding:.7rem 1rem;font-size:1.08rem}
         <div class="open hide" id="ropen"></div>
         <div class="legend">
           <span><b style="background:var(--arP)"></b>Next move played</span>
-          <span><b style="background:var(--blue)"></b>Predicted line: you</span>
+          <span><b style="background:var(--blue)"></b>Predicted line: player</span>
           <span><b style="background:var(--arR)"></b>Predicted line: opponent</span>
           <span><b style="background:var(--arO)"></b>Your arrows</span>
         </div>
@@ -1025,6 +1040,7 @@ body[data-tab="play"] #pnew{padding:.7rem 1rem;font-size:1.08rem}
         <div class="card c-sum">
           <div id="rsum"></div>
           <button id="copyreport" class="ghost">Copy details for ChatGPT</button>
+          <button id="sharelink" class="ghost" type="button">Share analysis link</button>
         </div>
 
         <div class="card c-explain" id="explain"></div>
@@ -1041,7 +1057,7 @@ body[data-tab="play"] #pnew{padding:.7rem 1rem;font-size:1.08rem}
         </div>
 
         <div class="card c-tally">
-          <h2>Your recurring flaws</h2>
+          <h2>Player's recurring flaws</h2>
           <div id="tally" class="tally"></div>
         </div>
       </div>
@@ -1675,7 +1691,7 @@ function typeTip(o){
   if(o.kind==="counter") return `A counter-gambit: ${o.side} answers by offering material back instead of defending passively.`;
   if(o.kind==="reply") return `How ${o.side} answers a gambit: take the material or decline it.`;
   if(o.kind==="defence") return `A defence: Black's way of answering ${o.first || "White's first move"}.`;
-  if(o.kind==="system") return "A setup you can aim for against many replies, rather than one fixed line.";
+  if(o.kind==="system") return "A setup to aim for against many replies, rather than one fixed line.";
   return "A well-known line from the first few moves.";
 }
 function openChips(o){ return `<span class="ecochip">${o.eco}</span><span class="ecochip ${o.cls}">${esc(o.tag)}</span>`; }
@@ -1931,7 +1947,7 @@ function judgePair(before, after, mv){
   const brilliantSound = sac && (sac.mateFor || sac.evalAfter >= 50);
   if(uci === before.best && sac && sac.directNet >= 2 && brilliantSound && notCrushing && !bookBefore && !onlyMove){
     r.kind = "brilliant"; r.cls = "brilliant";
-    r.text = "You gave up about " + sac.directNet + " point" + (sac.directNet===1?"":"s") + " of material with your " + NAMES[sac.piece] +
+    r.text = "The player gave up about " + sac.directNet + " point" + (sac.directNet===1?"":"s") + " of material with their " + NAMES[sac.piece] +
       ", and the engine still evaluates the position at " + evalText(after) + ". Worth it.";
     return r;
   }
@@ -1957,20 +1973,20 @@ function judgePair(before, after, mv){
     r.cls = "miss"; r.kind = "miss";
     r.tag = missedMate ? "missed_mate" : "missed_win";
     r.text = missedMate
-      ? "You had a forced mate" + (bm ? " starting with " + bm.san : "") + ", but this move lets it slip. When the enemy king is short of squares, check every check first."
-      : "You were winning by about " + (before.cp*mover/100).toFixed(1) + " pawns, but this move lets the advantage fall to " + (after.cp*mover/100).toFixed(1) + ". The engine's pick was " + (before.best ? describe(before.fen, before.best) : "unavailable") + ".";
+      ? "The player had a forced mate" + (bm ? " starting with " + bm.san : "") + ", but this move lets it slip. When the enemy king is short of squares, check every check first."
+      : "The player was winning by about " + (before.cp*mover/100).toFixed(1) + " pawns, but this move lets the advantage fall to " + (after.cp*mover/100).toFixed(1) + ". The engine's pick was " + (before.best ? describe(before.fen, before.best) : "unavailable") + ".";
     return r;
   }
   if(cls==="good") return r;
 
   if(after.mate!=null && after.mate*mover<0 && Math.abs(after.mate)<=3){
     r.tag="allowed_mate";
-    r.text = "This lets your opponent force checkmate" + (reply ? " (" + reply.san + ")" : "") + ". Before every move, check each check and capture your opponent has.";
+    r.text = "This lets the opponent force checkmate" + (reply ? " (" + reply.san + ")" : "") + ". Before every move, check every check and capture the opponent has.";
     return r;
   }
   if(missedMate){
     r.tag="missed_mate";
-    r.text = "You had a forced checkmate" + (bm ? " starting with " + bm.san : "") + ". When the enemy king is short of squares, look at every check first.";
+    r.text = "The player had a forced checkmate" + (bm ? " starting with " + bm.san : "") + ". When the enemy king is short of squares, look at every check first.";
     return r;
   }
   const rf = reply ? forkTargets(after.fen, after.best) : null;
@@ -1981,7 +1997,7 @@ function judgePair(before, after, mv){
   }
   if(reply && reply.captured && VAL[reply.captured]>=3 && cls!=="inacc"){
     r.tag="hanging";
-    r.text = "Your move left a " + NAMES[reply.captured] + " to be taken (" + reply.san + "). Before moving, ask: what can my opponent capture right now?";
+    r.text = "The move left a " + NAMES[reply.captured] + " to be taken (" + reply.san + "). Before moving, ask: what can the opponent capture right now?";
     return r;
   }
   const bf = bm ? forkTargets(before.fen, before.best) : null;
@@ -1994,7 +2010,7 @@ function judgePair(before, after, mv){
   const newPin = boardFacts(after.fen).pinned.find(x => x.color===mv.color && !pinsBefore.includes(x.sq));
   if(newPin){
     r.tag="pin";
-    r.text = "Your " + NAMES[newPin.type] + " on " + newPin.sq + " is now pinned to your king and can't move freely. Watch the lines your bishops, rooks and queen opponents control.";
+    r.text = "The " + NAMES[newPin.type] + " on " + newPin.sq + " is now pinned to the king and can't move freely. Watch the lines the opponent's bishops, rooks and queen control.";
     return r;
   }
   if(bm && (bm.captured || /[+#]/.test(bm.san))){
@@ -2004,16 +2020,16 @@ function judgePair(before, after, mv){
   }
   if(!hadMate && before.cp*mover>=250 && after.cp*mover<150){
     r.tag="missed_win";
-    r.text = "You were winning by about " + (before.cp*mover/100).toFixed(1) + " pawns, but this move throws most of it away (" + (after.cp*mover/100).toFixed(1) + " now). The engine's pick was " + describe(before.fen, before.best) + ".";
+    r.text = "The player was winning by about " + (before.cp*mover/100).toFixed(1) + " pawns, but this move throws most of it away (" + (after.cp*mover/100).toFixed(1) + " now). The engine's pick was " + describe(before.fen, before.best) + ".";
     return r;
   }
   if(sac && !sac.worth){
     r.tag="sac_bad";
-    r.text = "This sacrifice does not pay off: the engine says you come out worse (" + evalText(after) + "). Not worth it.";
+    r.text = "This sacrifice does not pay off: the engine says the player comes out worse (" + evalText(after) + "). Not worth it.";
     return r;
   }
   r.tag="drift";
-  r.text = "No piece was lost right away, but your position got worse. The engine's idea was " + describe(before.fen, before.best) + ".";
+  r.text = "No piece was lost right away, but the position got worse. The engine's idea was " + describe(before.fen, before.best) + ".";
   return r;
 }
 
@@ -2042,7 +2058,7 @@ function explainHtml(before, after, mv, rv, moveNo, live){
     h += `<div class="plan"><span class="lbl">Sacrifice check:</span> ` +
       (rv.sacWorth==="good"
         ? `worth it — about ${sc.net} point${sc.net===1?"":"s"} given up, and the engine still rates the position ${evalText(after)}.`
-        : `not worth it — the engine says you end up worse (${evalText(after)}).`) + `</div>`;
+        : `not worth it — the engine says the player ends up worse (${evalText(after)}).`) + `</div>`;
   }
   return h;
 }
@@ -2069,10 +2085,10 @@ function addStep(st, fen, u){
   if(!m) return false;
   const color = st.color, other = color==="w" ? "b" : "w";
   if(m.captured) st.mat[m.color] += VAL[m.captured];
-  const bal = st.mat[color] - st.mat[other]; // negative = you have lost more material in this line
+  const bal = st.mat[color] - st.mat[other]; // negative = the player has lost more material in this line
   let txt = d.slice(m.san.length).trim();
   txt = txt.charAt(0).toUpperCase() + txt.slice(1);
-  st.steps.push({from:m.from, to:m.to, san:m.san, fen:g.fen(), who:m.color===color?"You":"Opponent", txt, bal, mate:/#/.test(m.san),
+  st.steps.push({from:m.from, to:m.to, san:m.san, fen:g.fen(), who:m.color===color?"Player":"Opponent", txt, bal, mate:/#/.test(m.san),
     capture: m.captured ? {sq:m.to, mine:m.color===color} : null, snd: sndKind(m, m.color===color)});
   return true;
 }
@@ -2137,18 +2153,18 @@ function predChart(ctx, st){
     if(x.bal===0) c += `<rect x="${bx}" y="${zero-1.5}" width="${bw}" height="3" rx="1.5" fill="var(--muted)"/>`;
     else c += `<rect x="${bx}" y="${x.bal>0 ? zero-h : zero}" width="${bw}" height="${h}" rx="2" fill="${x.bal<0?"var(--bad)":"var(--good)"}"/>`;
     const every = Math.ceil(n/12);
-    if((i+1) % every === 0 || i===0) c += `<text x="${x0+slot/2}" y="${H-5}" font-size="12" font-weight="800" text-anchor="middle" fill="${x.who==="You"?"var(--blue)":"var(--bad)"}">${i+1}</text>`;
+    if((i+1) % every === 0 || i===0) c += `<text x="${x0+slot/2}" y="${H-5}" font-size="12" font-weight="800" text-anchor="middle" fill="${x.who==="Player"?"var(--blue)":"var(--bad)"}">${i+1}</text>`;
     if(x.mate) c += `<text x="${x0+slot/2}" y="12" font-size="13" font-weight="800" text-anchor="middle" fill="var(--bad)">#</text>`;
     c += `<rect class="pbar" data-ctx="${ctx}" data-k="${i}" x="${x0}" y="0" width="${slot}" height="${H}" fill="transparent"/>`;
   });
-  return `<svg class="pchart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Material for you through the predicted line">${c}</svg>`;
+  return `<svg class="pchart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Material for the player through the predicted line">${c}</svg>`;
 }
 function predInner(ctx){
   const st = predState[ctx];
   if(!st) return "";
   const len = st.steps.length;
   let h = `<div class="lbl">Predicting this move: ${len} prediction${len>1?"s":""}</div>`+
-    `<div class="evals">The engine's most likely line after your move. Blue is you, red is your opponent.</div>`+
+    `<div class="evals">The engine's most likely line after the move. Blue is the player, red is the opponent.</div>`+
     `<div class="pctl">`+
       `<button class="pact" data-ctx="${ctx}" data-act="prev" aria-label="Previous step">&#9664;</button>`+
       `<button class="pact primary wide" data-ctx="${ctx}" data-act="play">${st.playing ? "&#10074;&#10074; Pause" : "&#9654; Play line"}</button>`+
@@ -2157,11 +2173,11 @@ function predInner(ctx){
     `</div>`+
     (st.extending ? `<div class="evals">Extending the line to the end of the game… ${len} moves so far. <button class="pact" data-ctx="${ctx}" data-act="stop" style="padding:.27rem .67rem">Stop</button></div>` : "")+
     predChart(ctx, st)+
-    `<div class="evals" style="margin:.27rem 0 .4rem">Material for you through the line. Red bars mean you are down.${st.endText ? " " + st.endText : ""}</div>`+
+    `<div class="evals" style="margin:.27rem 0 .4rem">Material for the player through the line. Red bars mean the player is down.${st.endText ? " " + st.endText : ""}</div>`+
     `<div class="plist">`;
   st.steps.forEach((x,i) => {
-    const net = x.bal===0 ? "material even" : (x.bal<0 ? "you are down " + (-x.bal) : "you are up " + x.bal);
-    h += `<button class="pstep ${x.who==="You"?"me":"opp"}${st.k===i?" on":""}" data-ctx="${ctx}" data-k="${i}">`+
+    const net = x.bal===0 ? "material even" : (x.bal<0 ? "the player is down " + (-x.bal) : "the player is up " + x.bal);
+    h += `<button class="pstep ${x.who==="Player"?"me":"opp"}${st.k===i?" on":""}" data-ctx="${ctx}" data-k="${i}">`+
       `<span class="who">${i+1}. ${x.who}: ${x.san}</span><small>${x.txt}${x.mate?" Game over.":""} · ${net}</small></button>`;
   });
   h += `</div>`;
@@ -2175,7 +2191,7 @@ function focusStep(ctx){
   const el = document.querySelector("#predbox-" + ctx + " .pstep.on"), list = document.querySelector("#predbox-" + ctx + " .plist");
   if(el && list) list.scrollTop = el.offsetTop - list.clientHeight/2 + el.clientHeight/2;
 }
-const predColor = x => x.who==="You" ? "var(--blue)" : "var(--arR)";
+const predColor = x => x.who==="Player" ? "var(--blue)" : "var(--arR)";
 const predArrow = x => [[x.from, x.to, predColor(x), {}]];
 const predOver = ctx => { const st = predState[ctx]; return (st && st.k===-2) ? st : null; };
 const overviewArrows = st => st.steps.map(x => [x.from, x.to, predColor(x), {thin:true, op:.85}]);
@@ -2189,7 +2205,7 @@ function arrowMid(p, q){
 }
 const overviewNums = (st, flip) => st.steps.map((x,i) => {
   const m = arrowMid(sqCtr(x.from,flip), sqCtr(x.to,flip));
-  return {x:m.x, y:m.y, t:i+1, c:x.who==="You" ? "#2f6fb5" : "#d6453d"};
+  return {x:m.x, y:m.y, t:i+1, c:x.who==="Player" ? "#2f6fb5" : "#d6453d"};
 });
 const stepCaptures = x => x.capture ? [x.capture] : null;
 const overviewCaptures = st => st.steps.filter(x => x.capture).map(x => x.capture);
@@ -3307,7 +3323,7 @@ function drawSummary(){
   } else {
     const e = estimateElo(side);
     if(e){
-      elo = `<div class="elo" title="${tip}"><strong>~${e.elo}</strong><small>You • estimated Elo</small></div>`;
+      elo = `<div class="elo" title="${tip}"><strong>~${e.elo}</strong><small>Player • estimated Elo</small></div>`;
       detail = `Single-game range ~${e.low}–${e.high} · ${e.en} of ${e.n} moves used${e.skipped?` (${e.skipped} played from lost positions skipped)`:""} · ${e.acc}% accuracy · ${e.acpl} ACPL` +
         ((e.missedWins+e.missedMates) ? ` · ${e.missedWins+e.missedMates} missed win${(e.missedWins+e.missedMates)===1?"":"s"}` : "") +
         (e.missedTactics ? ` · ${e.missedTactics} missed tactic${e.missedTactics===1?"":"s"}` : "") +
@@ -3338,14 +3354,14 @@ function buildReport(){
     if(rv.tag) flawList.push({i, rv});
   });
   const out = [];
-  out.push("You are a chess coach. Analyze my game from the data below.");
+  out.push("Act as a chess coach. Analyze the game from the data below.");
   out.push("Please explain:");
-  out.push("1. My main flaws and recurring mistakes.");
-  out.push("2. What I played and what each of my moves was trying to do.");
-  out.push("3. What Stockfish wanted me to play instead.");
-  out.push("4. What Stockfish expected the opponent to do after my moves, and what the opponent's plan or threat was.");
+  out.push("1. The player's main flaws and recurring mistakes.");
+  out.push("2. What the player played and what each of the player's moves was trying to do.");
+  out.push("3. What Stockfish wanted the player to play instead.");
+  out.push("4. What Stockfish expected the opponent to do after the player's moves, and what the opponent's plan or threat was.");
   out.push("");
-  out.push("Use the chessboardimage.com markdown links in this report to display the board position when you discuss a move.");
+  out.push("Use the chessboardimage.com markdown links in this report to display the board position when discussing a move.");
   out.push("Board image URL format: https://chessboardimage.com/<FEN board field with slashes removed>.png (example: https://chessboardimage.com/86k186pp81r1RK1NP88.png).");
   out.push("");
   out.push("# Chess Analysis game report");
@@ -3638,7 +3654,8 @@ async function openDemoPicker(){
   }
 }
 
-$("go").onclick = () => {
+$("go").onclick = async () => {
+  if(!$("pgn").value.trim() && $("chesslink").value.trim()){ if(!(await loadChessCom())) return; }
   const games = parsePgnGames($("pgn").value);
   if(games.length > 1){
     openGamePicker(games, "pasted PGN");
@@ -3684,6 +3701,199 @@ $("next").onclick = () => step(1);
 $("side").onchange = () => { if(moves.length){ rflip = $("side").value==="b"; drawTally(); drawSummary(); show(); } };
 attachMarks($("board"), () => rflip, () => { if(moves.length) show(); });
 $("board").addEventListener("pointerdown", e => { if(e.button===0 && clearMarks("board") && moves.length) show(); });
+
+/* ================= Chess.com link loader + share links ================= */
+// Chess.com's callback endpoint has no CORS headers, so it goes through public CORS proxies (tried in order).
+// api.chess.com/pub does send CORS headers and is called directly. No login or API key is needed anywhere.
+const CORS_PROXIES = [
+  u => "https://corsproxy.io/?url=" + encodeURIComponent(u),
+  u => "https://proxy.corsfix.com/?" + encodeURIComponent(u),
+  u => "https://api.allorigins.win/raw?url=" + encodeURIComponent(u),
+  u => "https://api.codetabs.com/v1/proxy/?quest=" + encodeURIComponent(u),
+  u => "https://api.cors.lol/?url=" + encodeURIComponent(u)
+];
+async function fetchJson(url, viaProxy){
+  const tries = viaProxy ? CORS_PROXIES.map(p => p(url)) : [url];
+  let last = null; const errs = [];
+  for(const u of tries){
+    const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 12000);
+    try{
+      const r = await fetch(u, {signal:ctl.signal});
+      if(!r.ok) throw new Error("HTTP " + r.status);
+      return await r.json();
+    }catch(e){ last = e; errs.push(new URL(u).hostname + ": " + (e.name==="AbortError" ? "timeout" : e.message)); }
+    finally{ clearTimeout(t); }
+  }
+  console.warn("chess.com fetch failed:", errs);
+  const err = new Error(errs.join("; ") || "request failed"); err.detail = errs; throw err;
+}
+function parseChessLink(s){
+  s = String(s).trim();
+  const m = s.match(/\/(live|daily)\/(?:game\/)?(\d{5,})/i);
+  if(m) return {type:m[1].toLowerCase(), id:m[2]};
+  if(/^\d{5,}$/.test(s)) return {type:"live", id:s};
+  return null;
+}
+const PGN_KEEP = ["Event","Site","Date","White","Black","Result","WhiteElo","BlackElo","FEN","SetUp"];
+// Rebuild a PGN with only the useful headers and no clock comments, so it stays short in a link.
+function compactPgn(text){
+  try{
+    const g = new Chess();
+    if(!g.load_pgn(text, {sloppy:true})) return text.trim();
+    const h = g.header(), out = new Chess(h.FEN || undefined);
+    for(const san of g.history()) if(!out.move(san, {sloppy:true})) return text.trim();
+    PGN_KEEP.forEach(k => { if(h[k]) out.header(k, h[k]); });
+    return out.pgn().trim();
+  }catch(e){ return String(text).trim(); }
+}
+// Fallback: Chess.com's own compact move encoding (2 characters per move). Checked move by move against chess.js.
+const CC_ALPHA = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?{~}(^)[_]@#$,*+=:;-<>";
+function decodeMoveList(ml, h){
+  try{
+    const g = new Chess(), sq = i => "abcdefgh"[i%8] + (Math.floor(i/8)+1);
+    for(let i=0; i+1<ml.length; i+=2){
+      const a = CC_ALPHA.indexOf(ml[i]); let b = CC_ALPHA.indexOf(ml[i+1]), promo;
+      if(a<0 || b<0) return null;
+      if(b>63){ promo = "qnrbkp"[Math.floor((b-64)/3)]; b = a + (a<16 ? -8 : 8) + ((b-1)%3 - 1); }
+      if(b<0 || b>63 || !g.move({from:sq(a), to:sq(b), promotion:promo})) return null;
+    }
+    PGN_KEEP.forEach(k => { if(h[k]) g.header(k, h[k]); });
+    return g.pgn();
+  }catch(e){ return null; }
+}
+// With a username the game is found in the official monthly archives (direct, CORS-friendly, no proxy).
+async function findByUsername(user, id, st){
+  const base = "https://api.chess.com/pub/player/" + encodeURIComponent(user.toLowerCase()) + "/games";
+  const list = ((await fetchJson(base + "/archives", false)).archives || []).slice().reverse().slice(0, 48);
+  for(let i=0; i<list.length; i++){
+    st.textContent = "Searching " + user + "'s games… month " + (i+1) + " of " + list.length;
+    const arch = await fetchJson(list[i], false);
+    const f = (arch.games || []).find(x => String(x.url || "").endsWith("/" + id));
+    if(f && f.pgn) return f.pgn;
+  }
+  return null;
+}
+let chessLoading = false;
+// resolves true when the PGN box was filled
+async function loadChessCom(){
+  if(chessLoading) return false;
+  const st = $("status"), btn = $("chessload"), ref = parseChessLink($("chesslink").value);
+  if(!ref){ st.textContent = "That doesn't look like a chess.com game link. Paste a link like chess.com/game/live/123456789."; return false; }
+  const goWas = $("go").disabled;
+  chessLoading = true; btn.disabled = true; $("go").disabled = true;
+  st.textContent = "Fetching the game from chess.com…";
+  try{
+    const user = $("chessuser").value.trim();
+    let pgn = null, h = {}, game = {};
+    if(user){
+      try{ pgn = await findByUsername(user, ref.id, st); }catch(e){ console.warn("username lookup failed", e); }
+      if(!pgn) st.textContent = "Not found under " + user + ". Trying chess.com directly…";
+    }
+    if(!pgn){
+    const data = await fetchJson("https://www.chess.com/callback/" + ref.type + "/game/" + ref.id, true);
+    game = (data && data.game) || data || {}; h = game.pgnHeaders || {};
+    if(!h.White || !h.Black) throw new Error("no game data");
+    const parts = String(h.Date || "").split("."), y = +parts[0], m = +parts[1];
+    if(y && m){
+      // the monthly archive is filed by end time, so a game that crossed midnight can sit in the next month
+      for(const [yy, mm] of [[y, m], m===12 ? [y+1, 1] : [y, m+1]]){
+        const url = "https://api.chess.com/pub/player/" + encodeURIComponent(String(h.White).toLowerCase()) + "/games/" + yy + "/" + String(mm).padStart(2,"0");
+        try{
+          let arch;
+          try{ arch = await fetchJson(url, false); }catch(e){ arch = await fetchJson(url, true); }
+          const f = (arch.games || []).find(x => String(x.url || "").endsWith("/" + ref.id));
+          if(f && f.pgn){ pgn = f.pgn; break; }
+        }catch(e){}
+      }
+    }
+    if(!pgn && game.moveList) pgn = decodeMoveList(game.moveList, h);
+    }
+    if(!pgn) throw new Error("no pgn");
+    pgn = compactPgn(pgn);
+    $("pgn").value = pgn;
+    const w = (pgn.match(/\[White "([^"]*)"\]/) || [])[1] || "?", b = (pgn.match(/\[Black "([^"]*)"\]/) || [])[1] || "?";
+    if(user){ const u = user.toLowerCase(); if(w.toLowerCase()===u) $("side").value = "w"; else if(b.toLowerCase()===u) $("side").value = "b"; }
+    st.textContent = "Loaded " + w + " vs " + b + " from chess.com. Tap Analyze game.";
+    return true;
+  }catch(e){
+    const why = e && e.detail && e.detail.length ? " (" + e.detail.join("; ") + ")" : "";
+    st.textContent = "Couldn't load that game." + why + " Chess.com often blocks proxies. Enter your chess.com username in the field below the link, or paste the PGN (chess.com: Share, then PGN).";
+    if(!$("chessuser").value.trim()) $("chessuser").focus();
+    return false;
+  }finally{
+    chessLoading = false; btn.disabled = false; $("go").disabled = goWas;
+  }
+}
+$("chessload").onclick = loadChessCom;
+$("chesslink").addEventListener("keydown", e => { if(e.key==="Enter"){ e.preventDefault(); loadChessCom(); } });
+
+function b64url(bytes){
+  let s = "";
+  for(let i=0; i<bytes.length; i++) s += String.fromCharCode(bytes[i]);
+  return btoa(s).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+}
+function unb64url(str){
+  str = str.replace(/-/g,"+").replace(/_/g,"/");
+  while(str.length % 4) str += "=";
+  const bin = atob(str), out = new Uint8Array(bin.length);
+  for(let i=0; i<bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+// Share links keep the PGN, reviewed side and analysis depth in one deflated base64url payload.
+async function packShare(pgn, side, depth){
+  if(typeof CompressionStream === "undefined") return null;
+  try{
+    const data = new TextEncoder().encode(JSON.stringify({p:pgn, s:side, d:depth}));
+    const stream = new Blob([data]).stream().pipeThrough(new CompressionStream("deflate"));
+    const buf = await new Response(stream).arrayBuffer();
+    return b64url(new Uint8Array(buf));
+  }catch(e){ return null; }
+}
+async function unpackShare(z){
+  if(typeof DecompressionStream === "undefined") return null;
+  try{
+    const stream = new Blob([unb64url(z)]).stream().pipeThrough(new DecompressionStream("deflate"));
+    return JSON.parse(await new Response(stream).text());
+  }catch(e){ return null; }
+}
+async function shareUrl(){
+  const text = $("pgn").value.trim();
+  if(!text) return null;
+  const u = new URL(location.href);
+  u.search = ""; u.hash = "";
+  const pgn = compactPgn(text), side = $("side").value, depth = $("depth").value;
+  const plain = new URL(u);
+  plain.searchParams.set("pgn", pgn);
+  plain.searchParams.set("side", side);
+  plain.searchParams.set("depth", depth);
+  const z = await packShare(pgn, side, depth);
+  if(z){
+    const packed = new URL(u);
+    packed.searchParams.set("z", z);
+    if(packed.href.length < plain.href.length) return packed.href;
+  }
+  return plain.href;
+}
+$("sharelink").onclick = async () => {
+  const btn = $("sharelink"), label = "Share analysis link";
+  let msg = "", url = null;
+  btn.disabled = true; btn.textContent = "Preparing link…";
+  try{ url = await shareUrl(); }finally{ btn.disabled = false; }
+  if(!url) msg = "Analyze a game first";
+  else if(navigator.share && matchMedia("(pointer:coarse)").matches){
+    try{ await navigator.share({title:"Chess analysis", url}); msg = "Shared"; }
+    catch(e){
+      if(e && e.name==="AbortError"){ btn.textContent = label; return; }
+      try{ await copyText(url); msg = "Link copied"; }catch(e2){ msg = "Share failed - try again"; }
+    }
+  } else {
+    try{ await copyText(url); msg = "Link copied - send it to anyone"; }
+    catch(e){ msg = "Copy failed - try again"; }
+  }
+  btn.textContent = msg;
+  clearTimeout(btn._t);
+  btn._t = setTimeout(() => btn.textContent = label, 2500);
+};
 
 /* ================= Look: board + pieces ================= */
 $("boardsel").innerHTML = Object.keys(BOARDS).map(k => `<option value="${k}">${BOARDS[k].name} board</option>`).join("");
@@ -4771,6 +4981,44 @@ const bootEngine = () => { if(engineBooted) return; engineBooted = true; startEn
 if(document.readyState === "complete") bootEngine();
 else { addEventListener("load", bootEngine, {once:true}); setTimeout(bootEngine, 3000); }
 idle(loadOpenings);
+
+// Shared link (?z=... or legacy ?pgn=...): open Review and start the analysis as soon as Stockfish is ready.
+(async function(){
+  let text = null, sd = null, depth = null, z = null;
+  new URLSearchParams(location.search).forEach((v, k) => {
+    k = k.toLowerCase();
+    if(k==="pgn" && v.trim() && text===null) text = v.trim();
+    if(k==="side") sd = v;
+    if(k==="depth") depth = v;
+    if(k==="z" && v.trim()) z = v.trim();
+  });
+  if(z){
+    const data = await unpackShare(z);
+    if(data){
+      if(typeof data.p === "string") text = data.p.trim();
+      if(data.s) sd = data.s;
+      if(data.d) depth = data.d;
+    }
+  }
+  if(text===null) return;
+  $("pgn").value = text;
+  $("side").value = ["w","b","wb"].includes(sd) ? sd : "wb";
+  if(["8","10","13"].includes(String(depth))) $("depth").value = String(depth);
+  showTab("review");
+  const probe = new Chess();
+  if(!probe.load_pgn(text, {sloppy:true}) || !probe.history().length){
+    $("status").textContent = "The shared link doesn't contain a readable game. Paste a PGN or a chess.com link below.";
+    return;
+  }
+  $("status").textContent = "Shared game loaded. Waiting for Stockfish to start the analysis…";
+  const t0 = Date.now();
+  const go = () => {
+    if(engineReady) return run();
+    if(Date.now() - t0 > 240000){ $("status").textContent = "Stockfish took too long to start. Reload the page to try again."; return; }
+    setTimeout(go, 300);
+  };
+  go();
+})();
 </script>
 <script>
 /* settings popover: close on outside tap, Escape, or when switching tabs */
