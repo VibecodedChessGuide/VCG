@@ -17,7 +17,7 @@
     Learn / Openings / Engine styles .......................... 338-397
     touch target sizes ........................................ 398-403
     mobile layout (pinned Play board) ......................... 404-441
-    desktop rail layout ....................................... 442-575
+    desktop rail layout ....................................... 442-574
   BODY MARKUP ................................................. 576-934
     rail: tabs, settings, fullscreen .......................... 579-617
     Play tab .................................................. 618-686
@@ -1784,7 +1784,7 @@ function sacrificeInfo(before, after, mv){
     const mateFor = after.mate != null && after.mate * (mover==="w" ? 1 : -1) > 0;
     return {net, directNet, directOffered, offered, gain, evalAfter, evalBefore, mateFor, piece, sq: mv.to,
       sound: mateFor || evalAfter >= -50,
-      worth: mateFor || evalAfter >= -50 || evalAfter >= evalBefore - 50};
+      worth: mateFor || evalAfter >= -50 || (evalAfter >= evalBefore - 50 && evalAfter > -300)};
   }catch(e){ return null; }
 }
 
