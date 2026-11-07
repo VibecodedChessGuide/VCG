@@ -2,3 +2,6 @@ bak
 *.log
 .coach_inline_check.js
 assets/js/stockfish*
+.env
+.env.*
+!.env.example
