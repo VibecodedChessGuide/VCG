@@ -28,7 +28,7 @@
     Openings tab (explorer + trainer) .......................... 887-979
     Engine tab ................................................. 980-991
     Review tab ................................................. 992-1088
-  JAVASCRIPT (inline) .......................................... 1091-5097
+  JAVASCRIPT (inline) .......................................... 1091-5111
     config: engine paths, bots, boards, levels ................. 1092-1165
     sound effects .............................................. 1166-1221
     engine worker pool + search ................................ 1222-1461
@@ -59,8 +59,8 @@
       trainer starter lines .................................... 4668-4682
       trainer home screen ...................................... 4683-4743
       trainer drill ............................................ 4744-4925
-    tab switching + boot ....................................... 4926-5097
-  SETTINGS POPOVER SCRIPT ...................................... 5098-5107
+    tab switching + boot ....................................... 4926-5111
+  SETTINGS POPOVER SCRIPT ...................................... 5112-5121
   -------------------------------------------------------------------------
   Keep this map updated after edits (regenerate line numbers).
 -->
@@ -689,12 +689,12 @@ body{--tabH:0px}
 /* shared link (?z= / ?pgn=): view-only, no input card; the analysis shows in the boot screen */
 body.shared #rinput{display:none!important}
 #bootbar{display:none;width:min(20rem,70vw);height:.4rem;border-radius:99px;background:var(--raise);overflow:hidden}
-#bootbar.on{display:block}
+#bootbar.on{display:block}#bootside:empty,#bootpct:empty{display:none}#bootside{color:var(--text,inherit)!important;font-weight:800}#bootpct{font-variant-numeric:tabular-nums;font-weight:800}
 #bootfill{display:block;height:100%;width:0;background:var(--good);transition:width .2s ease}
 </style>
 </head>
 <body data-tab="play">
-<div id="bootscreen"><div class="spin"></div><h1>Deep analysis</h1><p id="bootmsg">Loading Stockfish…</p><div id="bootbar"><i id="bootfill"></i></div></div>
+<div id="bootscreen"><div class="spin"></div><h1>Deep analysis</h1><p id="bootside"></p><p id="bootmsg">Loading Stockfish…</p><div id="bootbar"><i id="bootfill"></i></div><p id="bootpct"></p></div>
 <div class="app">
 
   <aside class="rail">
@@ -5012,6 +5012,7 @@ const SHARED_LINK = (() => {
   return s;
 })();
 let sharedBusy = SHARED_LINK; // true until the shared game has been analysed (or failed)
+let sharedSideLabel = "";
 if(SHARED_LINK) document.body.classList.add("shared");
 // Finish the shared-link flow. If it failed, unlock the form so the page is never a dead end.
 function sharedEnd(failed){
@@ -5036,6 +5037,11 @@ function sharedEnd(failed){
         if(data.s) sd = data.s;
         if(data.d) depth = data.d;
       }
+    }
+    {
+      const sl = {w:"White", b:"Black", wb:"both sides"}[sd] || "both sides";
+      sharedSideLabel = "Reviewing " + sl;
+      if($("bootside")) $("bootside").textContent = sharedSideLabel;
     }
     if(text===null){
       $("status").textContent = "The shared link could not be read. Paste a PGN or a chess.com link below.";
@@ -5076,14 +5082,22 @@ function sharedEnd(failed){
 // whole load (engine download + analysing every position) is one loading screen with one progress bar.
 (function(){
   showTab("review");
-  const b = $("bootscreen"), m = $("bootmsg"), bar = $("bootbar"), fill = $("bootfill"), t0 = Date.now();
+  const b = $("bootscreen"), m = $("bootmsg"), bar = $("bootbar"), fill = $("bootfill"), pct = $("bootpct"), t0 = Date.now();
+  let sharedPct = 0;
+  if(SHARED_LINK){ const h = b.querySelector("h1"); if(h) h.textContent = "Analyzing shared game"; }
   const reveal = () => { b.classList.add("gone"); setTimeout(() => b.remove(), 400); };
   const tick = () => {
     const st = ($("status") && $("status").textContent) || "";
     if(SHARED_LINK && sharedBusy){
       if(/Could not load/.test(st)){ sharedEnd(true); reveal(); return; }
       if(m && st) m.textContent = st;
-      if($("bar").style.display === "block"){ bar.classList.add("on"); fill.style.width = $("barfill").style.width || "0"; }
+      // one continuous bar: engine download/start = first 30%, analysing every position = remaining 70%
+      const num = el => parseFloat((el && el.style.width) || "0") || 0;
+      const eng = engineReady ? 1 : Math.min(1, num($("eprogfill"))/100);
+      const ana = $("bar").style.display === "block" ? Math.min(1, num($("barfill"))/100) : 0;
+      sharedPct = Math.max(sharedPct, Math.round((engineReady ? 30 + 70*ana : 30*eng)));
+      bar.classList.add("on"); fill.style.width = sharedPct + "%";
+      if(pct) pct.textContent = sharedPct + "%";
       setTimeout(tick, 150);
       return;
     }
