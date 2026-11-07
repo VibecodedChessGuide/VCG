@@ -2,6 +2,66 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<!--
+  FILE MAP — index.html (single-file app; jump straight to the ranges you need)
+  Line numbers are absolute in this file. Read only the section you need.
+  -------------------------------------------------------------------------
+  HEAD / META / CSS ........................................... 1-574
+    theme tokens + light mode ................................. 74-119
+    base controls + buttons ................................... 120-160
+    app shell: rail, tabs, settings ........................... 161-197
+    page wrapper + sizing ..................................... 198-200
+    board, eval bar, players .................................. 201-241
+    Play tab styles ........................................... 242-282
+    Review tab styles ......................................... 283-337
+    Learn / Openings / Engine styles .......................... 338-397
+    touch target sizes ........................................ 398-403
+    mobile layout (pinned Play board) ......................... 404-441
+    desktop rail layout ....................................... 442-574
+  BODY MARKUP ................................................. 576-934
+    rail: tabs, settings, fullscreen .......................... 579-617
+    Play tab .................................................. 618-686
+    Learn tab ................................................. 687-738
+    Openings tab (explorer + trainer) ......................... 739-831
+    Engine tab ................................................ 832-843
+    Review tab ................................................ 844-934
+  JAVASCRIPT (inline) ......................................... 935-4362
+    config: engine paths, bots, boards, levels ................ 937-1011
+    sound effects ............................................. 1012-1067
+    engine worker pool + search ............................... 1068-1307
+    general helpers ........................................... 1308-1341
+    tactics: forks, pins, hanging pieces ...................... 1342-1413
+    openings dataset + explorer ............................... 1414-1707
+    background chess.js worker ................................ 1708-1750
+    move judging / classifications ............................ 1751-1944
+    predictions after bad moves ............................... 1945-2124
+    board drawing (SVG) ....................................... 2125-2302
+    square helpers + right-click marks ........................ 2303-2353
+    Play mode: hints, engine moves ............................ 2354-2700
+      pointer input (tap / drag) .............................. 2543-2700
+    Review mode ............................................... 2701-3279
+    board + piece set selection ............................... 3280-3302
+    Learn: seeded engine puzzles .............................. 3303-3965
+      theme tests (mate, tactics, endgames) ................... 3346-3411
+      seeded start positions .................................. 3412-3457
+      side cooperation for puzzle building .................... 3458-3497
+      puzzle difficulty rating ................................ 3498-3592
+      puzzle UI state ......................................... 3593-3825
+      puzzle move checking .................................... 3826-3909
+      puzzle board input ...................................... 3910-3965
+    opening trainer (repertoire drills) ....................... 3966-4288
+      trainer starter lines ................................... 4031-4045
+      trainer home screen ..................................... 4046-4106
+      trainer drill ........................................... 4107-4288
+    tab switching + boot ...................................... 4289-4362
+  SETTINGS POPOVER SCRIPT ..................................... 4363-4372
+  -------------------------------------------------------------------------
+  Keep this map updated after large edits (regenerate line numbers).
+
+
+
+
+-->
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Chess Analysis</title>
 <meta name="description" content="Play Stockfish, get move-by-move analysis, review your games and explore openings. Runs fully in your browser.">
