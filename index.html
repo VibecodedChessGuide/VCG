@@ -404,6 +404,7 @@ body.cssfs .top{justify-content:flex-end}
         </select>
       </label>
       <button id="psound">Sound: on</button>
+      <button id="optmode" type="button">Optimisation: off</button>
     </div>
   </details>
 
@@ -2119,7 +2120,7 @@ function attachMarks(svg, getFlip, redraw){
 /* ================= PLAY MODE ================= */
 let pg = null, humanColor = "w", pFlip = false, selSq = null, lastMove = null;
 let analysisBefore = null, thinking = false, awaiting = null, over = false, gameId = 0;
-let fb = null, hint = null, ptags = [];
+let fb = null, hint = null, ptags = [], optMode = false;
 let hideSq = null, hoverSq = null, pendingAnim = null, spec = null;
 
 function setP(t){ $("pstatus").textContent = t; }
@@ -2145,7 +2146,7 @@ function renderPlay(boardOnly){
   pendingAnim = null; predAnim = null;
   $("pfacts").textContent = facts ? factsText(facts) : "";
   const ph = $("phints");
-  ph.classList.toggle("hide", !hint);
+  ph.classList.toggle("hide", !hint || optMode);
   if(hint) setHTML(ph, hint.items.map(x => `<div class="hl${x.uci ? "" : " none"}"><i style="background:${x.color}"></i><span><b>${x.label}:</b> ${esc(x.text)}</span></div>`).join(""));
   if(boardOnly) return;
   const h = pg.history(); let t = "";
@@ -2367,6 +2368,7 @@ $("pcont").onclick = continueGame;
 $("ptoggle").onclick = toggleFacts;
 $("rtoggle").onclick = toggleFacts;
 $("psound").onclick = () => { soundOn = !soundOn; $("psound").textContent = "Sound: " + (soundOn?"on":"off"); if(soundOn) snd("self"); };
+$("optmode").onclick = () => { optMode = !optMode; $("optmode").textContent = "Optimisation: " + (optMode?"on":"off"); if(pg) renderPlay(); };
 /* Hint = three ideas from the engine's top lines: an attacking move, a defensive move, and a tactic. */
 const HINT_KINDS = [["off","Offensive","var(--arR)"],["def","Defensive","var(--blue)"],["tac","Tactical","var(--arO)"]];
 function hintTriple(fen, lines){
@@ -2413,7 +2415,27 @@ function hintTriple(fen, lines){
 $("phint").onclick = async () => {
   if(thinking || awaiting || over || !pg) return;
   const id = gameId, fen = pg.fen();
-  $("phint").disabled = true; setP("Looking for attacking, defensive and tactical ideas…");
+  $("phint").disabled = true;
+  if(optMode){
+    setP("Finding the best move…");
+    let b = null;
+    try{ b = await analysisBefore; }catch(e){}
+    if(id!==gameId || !pg || pg.fen()!==fen) return;
+    if(!b || b.fen!==fen || !b.best){
+      let lines = null;
+      try{ lines = await lsearch(fen, 12, 1); }catch(e){}
+      if(id!==gameId || !pg || pg.fen()!==fen) return;
+      if(lines && lines[0]) b = {best: lines[0].mv};
+    }
+    if(!b || !b.best){ setP("No hint available right now. Your move."); renderPlay(); return; }
+    hint = {items:[{label:"Best move", color:"var(--arG)", uci:b.best, text:""}]};
+    if(fb) fb.arrowsOn = false;
+    renderPlay();
+    const g = new Chess(fen), m = uciToMove(g, b.best);
+    setP("Best move: " + (m ? m.san : b.best) + ".");
+    return;
+  }
+  setP("Looking for attacking, defensive and tactical ideas…");
   let lines = null;
   try{ lines = await lsearch(fen, 10, 8); }catch(e){}
   if(id!==gameId || !pg || pg.fen()!==fen) return;
