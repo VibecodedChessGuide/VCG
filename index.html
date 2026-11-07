@@ -5,408 +5,555 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Chess Analysis</title>
 <meta name="description" content="Play Stockfish, get move-by-move analysis, review your games and explore openings. Runs fully in your browser.">
-<meta name="theme-color" content="#312e2b">
+<meta name="theme-color" content="#262421">
+<meta name="color-scheme" content="dark light">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%23739552'/%3E%3Ctext x='50' y='72' font-size='64' text-anchor='middle' fill='%23fff'%3E%E2%99%9E%3C/text%3E%3C/svg%3E">
 <link rel="preload" href="assets/boards/green.png" as="image">
 <style>
+/* =====================================================================
+   Chess Analysis — chess.com-style UI
+   Mobile first: top bar + bottom tab bar, board pinned on Play.
+   >= 56rem (and landscape phones): left rail, board + side panel.
+   >= 80rem: rail grows labels.
+   ===================================================================== */
 :root{
   color-scheme:dark;
-  --bg:#312e2b; --panel:#262421; --ink:#ffffff; --muted:#a8a7a5; --line:#3d3a37;
+  --bg:#312e2b; --panel:#262421; --deep:#1f1e1b; --raise:#3b3935;
+  --ink:#ffffff; --soft:#e1e0de; --muted:#a8a7a5; --line:#3d3a37;
   --btn:#45423e; --btnb:#1f1d1b; --btnink:#ffffff;
   --sqL:#ebecd0; --sqD:#739552;
   --hl:rgba(255,255,51,.5);
-  --good:#81b64c; --bad:#fa412d; --warn:#f7a531; --blue:#6aa6e6;
+  --good:#81b64c; --goodb:#45753c; --bad:#fa412d; --warn:#f7a531; --blue:#6aa6e6;
   --arG:#81b64c; --arR:#e5493a; --arO:#ffaa00; --arP:#b06cff;
   --pieceW:#fbfbfb; --pieceWs:#10151a; --pieceB:#10151a; --pieceBs:#e8edf2;
+  --shadow:0 .6rem 1.6rem rgba(0,0,0,.45);
+  --arrow:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%23a8a7a5' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --rail:4.6rem; --topH:3.25rem; --tabH:3.8rem; --pad:1rem; --gap:.7rem;
+  --sat:env(safe-area-inset-top,0px); --sab:env(safe-area-inset-bottom,0px);
 }
 @media (prefers-color-scheme: light){
   :root{
     color-scheme:light;
-    --bg:#edebe9; --panel:#ffffff; --ink:#262421; --muted:#6d6b69; --line:#dcd9d6;
+    --bg:#edebe9; --panel:#ffffff; --deep:#f3f1ef; --raise:#e7e4e0;
+    --ink:#262421; --soft:#3d3a37; --muted:#6d6b69; --line:#dcd9d6;
     --btn:#e6e3df; --btnb:#bfbbb6; --btnink:#262421;
-    --good:#5f8f2c; --bad:#d6341f; --warn:#c77a0c; --blue:#2f6fb5;
+    --good:#5f8f2c; --goodb:#3f6a1c; --bad:#d6341f; --warn:#c77a0c; --blue:#2f6fb5;
+    --shadow:0 .6rem 1.6rem rgba(40,30,20,.22);
   }
 }
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:1rem/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-.wrap{max-width:37.3333rem;margin:0 auto;padding:0.9333rem 0.8rem 2.6667rem}
-h1{font:800 1.6rem/1.2 system-ui,-apple-system,"Segoe UI",sans-serif;margin:0.2667rem 0 0.1333rem;letter-spacing:-.01em}
-.sub{color:var(--muted);margin:0 0 0.8rem}
-.tabs{display:flex;gap:0.4rem;margin-bottom:0.8rem}
-.tabs button{flex:1}
-.card{background:var(--panel);border-radius:0.5333rem;padding:0.8rem;margin-bottom:0.8rem}
-textarea{width:100%;height:5.6rem;border:1px solid var(--line);border-radius:0.4rem;padding:0.5333rem;background:var(--bg);color:var(--ink);font:0.8667rem/1.4 ui-monospace,Menlo,monospace;resize:vertical}
-.row{display:flex;gap:0.5333rem;flex-wrap:wrap;align-items:center;margin-top:0.5333rem}
-.row:first-child{margin-top:0}
-select,button{font:inherit;color:var(--btnink);background:var(--btn);border:0;border-bottom:3px solid var(--btnb);border-radius:0.4rem;padding:0.5333rem 0.9333rem;font-weight:700}
-select{font-weight:600;border-bottom-width:1px;border:1px solid var(--line)}
-button{cursor:pointer;touch-action:manipulation}
-button:active:not(:disabled){transform:translateY(1px);border-bottom-width:2px}
-button.primary,.tabs button.on{background:#81b64c;border-bottom-color:#45753c;color:#fff}
-button:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid #81b64c;outline-offset:2px}
-button:disabled{opacity:.45;cursor:default}
+
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{font-size:clamp(.9375rem,.875rem + .25vw,1.05rem);-webkit-text-size-adjust:100%;text-size-adjust:100%;scrollbar-width:thin;scrollbar-color:var(--raise) transparent}
+body{margin:0;min-height:100vh;min-height:100dvh;background:var(--bg);color:var(--ink);
+  font:500 1rem/1.45 "Segoe UI",system-ui,-apple-system,Roboto,"Helvetica Neue",Arial,sans-serif}
+h1,h2,p{margin:0}
+h2{font-size:1.05rem;font-weight:800;line-height:1.2;margin-bottom:.6rem}
 .hide{display:none!important}
-.bar{height:0.4rem;background:var(--line);border-radius:0.2rem;overflow:hidden;margin-top:0.6667rem;display:none}
-.bar i{display:block;height:100%;width:0;background:#81b64c;transition:width .2s}
-.ptxt{display:none;color:var(--muted);font-size:0.8333rem;margin-top:0.2667rem}
+.empty{color:var(--muted)}
+.tip{font-size:.82rem;color:var(--muted);margin-top:.45rem;line-height:1.4}
+.sub{color:var(--muted)}
+svg,button,summary,select,.chip,.pstep,.evalbar,.pl,.nav,.tabs{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+::-webkit-scrollbar{width:.55rem;height:.55rem}
+::-webkit-scrollbar-thumb{background:var(--raise);border-radius:1rem}
+::-webkit-scrollbar-track{background:transparent}
+
+/* ---------- controls ---------- */
+button{font:inherit;font-weight:700;line-height:1.2;color:var(--btnink);background:var(--btn);border:0;border-bottom:4px solid var(--btnb);
+  border-radius:.55rem;padding:.6rem 1rem;cursor:pointer;touch-action:manipulation;transition:filter .12s,background .12s}
+button:hover:not(:disabled){filter:brightness(1.12)}
+button:active:not(:disabled){transform:translateY(2px);border-bottom-width:2px}
+button:disabled{opacity:.45;cursor:default}
+button.primary{background:var(--good);border-bottom-color:var(--goodb);color:#fff}
+button.ghost{background:transparent;border:1px solid var(--line);color:var(--ink);padding:.55rem 1rem}
+button.ghost:active:not(:disabled){transform:none;border-width:1px}
+button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible,summary:focus-visible{outline:2px solid var(--good);outline-offset:2px}
+
+select,input,textarea{font:inherit;font-weight:600;color:var(--ink);background:var(--deep);border:1px solid var(--line);border-radius:.5rem;min-width:0}
+select{appearance:none;-webkit-appearance:none;padding:.65rem 2.1rem .65rem .85rem;font-weight:700;
+  background:var(--deep) var(--arrow) no-repeat right .8rem center/.8rem;cursor:pointer;text-overflow:ellipsis}
+input{padding:.65rem .85rem}
+input::placeholder,textarea::placeholder{color:var(--muted);font-weight:500}
+textarea{display:block;width:100%;height:7rem;padding:.75rem;resize:vertical;font:500 .86rem/1.45 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.field{display:flex;flex-direction:column;gap:.3rem;min-width:0}
+.field>span{font-size:.78rem;font-weight:700;color:var(--muted)}
+.field>select,.field>input{width:100%}
+.row{display:flex;gap:.55rem;flex-wrap:wrap;align-items:center;margin-top:.55rem}
+.row:first-child{margin-top:0}
+.row>button{flex:1 1 auto}
+.row>select,.row>input{flex:1 1 7rem}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:.55rem}
+.cols+.row,.cols+.cols{margin-top:.55rem}
+
+.card{background:var(--panel);border-radius:.7rem;padding:1rem;min-width:0}
+.lay{display:grid;gap:var(--gap);align-content:start}
+.lay>*{min-width:0}
+
+.status{color:var(--muted);font-size:.9rem;margin-top:.55rem;min-height:1.3rem}
+#pstatus{min-height:calc(2*1.45*.9rem)}
+.bar{height:.45rem;background:var(--deep);border-radius:1rem;overflow:hidden;margin-top:.7rem;display:none}
+.bar i{display:block;height:100%;width:0;background:var(--good);transition:width .2s;border-radius:1rem}
 .bar.indet i{width:35%!important;animation:indet 1.1s linear infinite}
 @keyframes indet{0%{margin-left:-35%}100%{margin-left:100%}}
-.status{color:var(--muted);font-size:0.9rem;margin-top:0.5333rem;min-height:1.3333rem}
-.bots{margin-top:0.6667rem}
-.botrow{display:block;width:100%;text-align:left;background:var(--bg);border:1px solid var(--line);border-radius:0.4rem;color:var(--ink);padding:0.6667rem 0.8rem;margin-bottom:0.5333rem;font:inherit;cursor:pointer}
-.botrow:hover,.botrow:focus-visible{background:var(--btn)}
-.botrow .bname{display:block;font-weight:700}
-.botrow .bsub{color:var(--muted);font-size:0.8333rem;margin-top:0.1333rem;display:block}
-.botrow.sel{border-color:#81b64c;background:var(--btn)}
+.ptxt{display:none;color:var(--muted);font-size:.82rem;margin-top:.3rem}
+#pprog{display:block!important;visibility:hidden;margin-top:.5rem}
+#pprog[style*="block"]{visibility:visible}
 
-.boardgrid{display:grid;grid-template-columns:1.7333rem 1fr;gap:0.4rem 0.5333rem}
-.boardgrid > .pl{grid-column:2}
-.evalbar{width:1.7333rem;border-radius:0.2667rem;overflow:hidden;background:#403d39;position:relative}
-.evalfill{position:absolute;left:0;right:0;bottom:0;background:#fff;height:50%;transition:height .3s}
-.evalbar.flip .evalfill{bottom:auto;top:0}
-.evaltxt{position:absolute;left:0;right:0;font:700 0.6667rem/1 system-ui,sans-serif;text-align:center;padding:0.2667rem 0}
-.evaltxt.atBottom{bottom:0}.evaltxt.atTop{top:0}
-.evaltxt.dk{color:#403d39}.evaltxt.lt{color:#fff}
-.bd{display:block;width:100%;min-width:0;border-radius:0.2667rem;aspect-ratio:1/1;touch-action:manipulation;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
-#pboard{touch-action:none}
+/* ---------- app shell: top bar + bottom tabs (mobile) ---------- */
+.rail{position:fixed;z-index:40;top:0;left:0;right:0;height:calc(var(--topH) + var(--sat));padding:var(--sat) max(.75rem,env(safe-area-inset-right)) 0 max(.75rem,env(safe-area-inset-left));
+  display:flex;align-items:center;gap:.5rem;background:var(--panel);box-shadow:0 1px 0 rgba(0,0,0,.28)}
+.brand{display:flex;align-items:center;gap:.6rem;min-width:0}
+.logo{width:1.95rem;height:1.95rem;flex:none;display:block}
+.brand h1{font:800 1.12rem/1 "Segoe UI",system-ui,-apple-system,Roboto,sans-serif;letter-spacing:-.01em;white-space:nowrap;color:var(--ink)}
+.railfoot{margin-left:auto;display:flex;align-items:center;gap:.15rem}
+
+.tabs{position:fixed;z-index:40;left:0;right:0;bottom:0;height:calc(var(--tabH) + var(--sab));padding:0 env(safe-area-inset-right) var(--sab) env(safe-area-inset-left);
+  display:grid;grid-template-columns:repeat(5,1fr);background:var(--panel);box-shadow:0 -1px 0 rgba(0,0,0,.28)}
+.tabs button,.railbtn,.settings summary{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.18rem;
+  background:none;border:0;border-radius:0;color:var(--muted);font:700 .68rem/1.1 inherit;font-family:inherit;padding:.4rem 0;position:relative;cursor:pointer;
+  list-style:none;transition:color .12s,background .12s}
+.tabs button svg,.railbtn svg,.settings summary svg{width:1.55rem;height:1.55rem;fill:currentColor;flex:none}
+.tabs button:hover:not(:disabled),.railbtn:hover:not(:disabled){filter:none}
+.tabs button:active:not(:disabled),.railbtn:active:not(:disabled){transform:none;border-bottom-width:0}
+.tabs button.on{color:var(--good)}
+.tabs button.on::before{content:"";position:absolute;top:0;left:28%;right:28%;height:3px;border-radius:0 0 3px 3px;background:var(--good)}
+
+/* settings + full screen: icon buttons in the top bar */
+.railbtn,.settings summary{width:2.6rem;height:2.6rem;border-radius:.6rem;padding:0}
+.railbtn span,.settings summary span{display:none}
+.railbtn:hover,.settings summary:hover,.settings[open] summary{color:var(--ink);background:var(--bg)}
+.settings{position:static}
+.settings summary::-webkit-details-marker{display:none}
+.sbody{position:fixed;z-index:60;left:.6rem;right:.6rem;top:calc(var(--topH) + var(--sat) + .4rem);max-height:calc(100dvh - var(--topH) - var(--tabH) - var(--sat) - var(--sab) - 1rem);overflow-y:auto;
+  background:var(--panel);border:1px solid var(--line);border-radius:.8rem;padding:1rem;box-shadow:var(--shadow);display:grid;gap:.75rem;grid-template-columns:1fr 1fr}
+.sbody h2{grid-column:1/-1;margin:0}
+.sbody .wide{grid-column:1/-1}
+.sbody button{padding:.65rem .8rem}
+
+body.cssfs .brand,body.cssfs .tabs,body.cssfs .settings{display:none}
+body.cssfs .rail{background:transparent;box-shadow:none;pointer-events:none}
+body.cssfs .railfoot{pointer-events:auto;background:var(--panel);border-radius:.6rem}
+body.cssfs .wrap{padding-top:calc(var(--topH) + var(--sat))!important}
+body.cssfs .tabs+*{}
+
+/* ---------- page ---------- */
+.wrap{max-width:92rem;margin:0 auto;padding:calc(var(--topH) + var(--sat) + .7rem) max(.6rem,env(safe-area-inset-right)) calc(var(--tabH) + var(--sab) + 1.2rem) max(.6rem,env(safe-area-inset-left))}
+
+/* ---------- board + players ---------- */
+.boardgrid{--ev:1.5rem;--bgap:.4rem;display:grid;grid-template-columns:var(--ev) minmax(0,1fr);gap:var(--bgap);align-items:stretch;
+  width:calc(var(--B,24rem) + var(--ev) + var(--bgap));max-width:100%;margin-inline:auto}
+.boardgrid>.pl{grid-column:2}
+.bd{display:block;width:100%;min-width:0;aspect-ratio:1/1;border-radius:.3rem;box-shadow:0 0 0 1px rgba(0,0,0,.3);touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+#pboard,#lboard,#tboard{touch-action:none}
 .slide{animation:slide .16s ease-out}
 @keyframes slide{from{transform:translate(var(--dx),var(--dy))}to{transform:translate(0,0)}}
-@media (prefers-reduced-motion: reduce){.slide{animation:none}}
-.pl{font-weight:700;font-size:0.9333rem;display:flex;align-items:center;gap:0.5333rem;min-height:1.4667rem}
-.sw{display:inline-block;width:0.9333rem;height:0.9333rem;border-radius:0.2rem}
-.sw.w{background:#fff;border:1px solid #8d8b89}.sw.b{background:#262421;border:1px solid #6d6b69}
+@media (prefers-reduced-motion: reduce){.slide,.open.pulse,.bar.indet i{animation:none}*{transition:none!important}}
 
-.legend{display:flex;gap:0.9333rem;flex-wrap:wrap;font-size:0.8333rem;color:var(--muted);margin:0.6667rem 0 0}
-.legend b{display:inline-block;width:1.2rem;height:0.4rem;vertical-align:middle;margin-right:0.3333rem;border-radius:0.2rem}
-.tip{font-size:0.8rem;color:var(--muted);margin-top:0.4rem}
-.nav{display:flex;gap:0.5333rem;margin-top:0.6667rem}
-.nav button{flex:1;padding:0.5333rem 0.4rem}
-.facts{font-size:0.8667rem;color:var(--muted);margin-top:0.5333rem}
-.verdict{font:800 1.1333rem/1.3 system-ui,sans-serif;margin:0 0 0.2667rem}
-.verdict.good{color:var(--good)}.verdict.bad{color:var(--bad)}.verdict.warn{color:var(--warn)}
-.evals{color:var(--muted);font-size:0.8667rem;margin-bottom:0.5333rem}
-.plan{border-left:3px solid var(--good);padding-left:0.6667rem;margin:0.5333rem 0}
-.flaw{border-left:3px solid var(--bad);padding-left:0.6667rem;margin:0.5333rem 0}
-.lbl{font-weight:700}
-.pv{font:0.8667rem ui-monospace,Menlo,monospace;color:var(--muted);word-break:break-word}
-#moves{display:flex;gap:0.4rem;overflow-x:auto;padding-bottom:0.4rem}
-.chip{flex:none;padding:0.3333rem 0.6667rem;border-radius:0.4rem;border:1px solid var(--line);border-bottom-width:1px;background:var(--bg);font-size:0.8667rem;font-weight:600;cursor:pointer;color:var(--ink)}
-.chip.sel{outline:2px solid #81b64c}
-.chip.inacc{border-color:#f7c631;color:#f7c631}
-.chip.mistake{border-color:#ffa459;background:#ffa459;color:#2a1a08}
-.chip.blunder{border-color:#fa412d;background:#fa412d;color:#fff}
-.chip.brilliant{border-color:#1baca6;background:#1baca6;color:#fff}
-.chip.book{border-color:#a88865;background:#a88865;color:#fff}
-.chip.great{border-color:#749bbf;background:#749bbf;color:#fff}
-.chip.miss{border-color:#e06c5a;color:#e06c5a}
-.tally{display:grid;grid-template-columns:10rem 1fr 1.8667rem;gap:0.4rem 0.5333rem;align-items:center;font-size:0.9rem}
-.tally .t{height:0.6667rem;background:var(--line);border-radius:0.3333rem;overflow:hidden}
-.tally .t i{display:block;height:100%;background:var(--bad)}
-h2{font:800 1.0667rem/1.2 system-ui,sans-serif;margin:0 0 0.5333rem}
-#graph{width:100%;height:auto;display:block;cursor:pointer;border-radius:0.4rem}
-.empty{color:var(--muted)}
-.preds{margin-top:0.6667rem;padding-top:0.6667rem;border-top:1px solid var(--line)}
-.pstep{display:block;width:100%;text-align:left;font-size:0.9rem;padding:0.4667rem 0.6667rem;margin:0.3333rem 0;border-radius:0.4rem;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-bottom-width:1px;font-weight:600}
-.pstep small{display:block;color:var(--muted);font-weight:500;font-size:0.8333rem}
-.pstep .who{font-weight:800}
-.pstep.opp .who{color:var(--bad)}
-.pstep.me .who{color:var(--blue)}
-.pstep.on{outline:2px solid #81b64c}
-.pback{margin-top:0.4rem;width:100%}
-.open{margin-top:0.6667rem;padding:0.5333rem 0.6667rem;border-radius:0.4rem;background:var(--bg);font-size:0.9rem}
-.open .tip{color:var(--muted);font-size:0.8333rem;margin-top:0.2rem;line-height:1.4}
-.open .tip.fine{font-size:0.8rem;opacity:.85}
+.evalbar{width:var(--ev);border-radius:.3rem;overflow:hidden;background:#403d39;position:relative}
+.evalfill{position:absolute;left:0;right:0;bottom:0;background:#fff;height:50%;transition:height .3s}
+.evalbar.flip .evalfill{bottom:auto;top:0}
+.evaltxt{position:absolute;left:0;right:0;font:800 .62rem/1 "Segoe UI",system-ui,sans-serif;text-align:center;padding:.3rem 0}
+.evaltxt.atBottom{bottom:0}.evaltxt.atTop{top:0}
+.evaltxt.dk{color:#403d39}.evaltxt.lt{color:#fff}
+
+.pl{display:flex;align-items:center;gap:.6rem;min-height:2.5rem;font-weight:800;font-size:.95rem;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sw{display:inline-block;width:1rem;height:1rem;border-radius:.2rem;flex:none}
+.sw.w{background:#f4f3ee;border:1px solid #8d8b89}
+.sw.b{background:#403d39;border:1px solid #6d6b69}
+.pl .sw{width:2.1rem;height:2.1rem;border-radius:.3rem;display:grid;place-items:center;font-size:1.45rem;line-height:1;border:0}
+.pl .sw::before{content:"\265A\FE0E"}
+.pl .sw.w{background:#ebecd0;color:#262421;box-shadow:inset 0 0 0 1px rgba(0,0,0,.22)}
+.pl .sw.b{background:#4b4845;color:#f4f3ee}
+
+.c-board{background:none;padding:0;border-radius:0}
+.open{margin-top:.55rem;padding:.6rem .8rem;border-radius:.55rem;background:var(--panel);font-size:.9rem;border-left:4px solid var(--good)}
+.open .tip{margin-top:.25rem;color:var(--muted)}
+.open .tip.fine{font-size:.78rem;opacity:.85}
 .open.pulse{animation:pulse 1.4s ease-out}
-@keyframes pulse{from{box-shadow:0 0 0 2px #81b64c}to{box-shadow:0 0 0 2px transparent}}
-@media (prefers-reduced-motion:reduce){.open.pulse{animation:none}}
-.ecochip{display:inline-block;font-size:0.7667rem;font-weight:800;padding:0.0667rem 0.4rem;border-radius:0.2667rem;background:var(--btn);color:var(--btnink);margin-left:0.2667rem;vertical-align:1px}
-.ecochip.gam{background:#f7c631;color:#2a1a08}
-.ecochip.def{background:#6aa6e6;color:#10202f}
-#openlist{display:flex;flex-wrap:wrap;gap:0.4rem;margin-bottom:0.5333rem}
-.ofilters{display:flex;flex-wrap:wrap;gap:0.5333rem;margin:0.6667rem 0}
-.ofilters input{flex:1 1 100%;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:0.4rem;padding:0.6rem 0.8rem}
-.ofilters select{flex:1 1 9.33rem}
-.ores button{display:flex;justify-content:space-between;align-items:center;gap:0.5333rem;width:100%;text-align:left;margin:0 0 0.2667rem;font-weight:600;font-size:0.9rem;border:1px solid var(--line);border-bottom-width:1px;background:var(--bg)}
-.ores button small{color:var(--muted);font-weight:600;white-space:nowrap}
-.olines{font-size:0.9rem;line-height:1.7;margin:0.5333rem 0}
-.olines b{background:var(--hl);color:#10151a;border-radius:0.2rem;padding:0 0.2rem}
-.pn{display:flex;align-items:center;gap:0.4rem;font-weight:600;font-size:0.9333rem}
-.pn input{width:5.6rem;font:inherit;font-weight:600;color:var(--btnink);background:var(--btn);border:1px solid var(--line);border-radius:0.4rem;padding:0.4667rem 0.5333rem}
-.pn select{padding:0.4667rem 0.5333rem;font-size:0.8667rem}
-.plist{max-height:25.3333rem;overflow-y:auto;position:relative}
-.pctl{display:flex;gap:0.4rem;margin:0.5333rem 0}
-.pctl button{flex:1;padding:0.4667rem 0.2667rem;font-size:0.8667rem}
-.pctl .wide{flex:2}
-.pchart{width:100%;height:auto;display:block;background:var(--bg);border-radius:0.4rem}
-.pbar{cursor:pointer}
-.hist{font:0.8667rem/1.5 ui-monospace,Menlo,monospace;color:var(--muted);margin-top:0.5333rem;word-break:break-word}
-
-/* ===== layout overhaul ===== */
-.wrap{max-width:73.3333rem;padding:0.5333rem 0.6667rem 1.3333rem}
-.top{display:flex;align-items:center;gap:0.6667rem;margin-bottom:0.5333rem}
-h1{font-size:1.2667rem;margin:0;flex:none}
-.tabs{flex:1;margin:0;max-width:24rem}
-.tabs button{padding:0.4667rem 0.2667rem;font-size:0.9333rem}
-.card{margin-bottom:0;padding:0.6667rem}
-.lay{display:grid;gap:0.5333rem;align-content:start}
-.lay>.card{min-width:0}
-details.settings{margin-bottom:0.5333rem;padding:0.5333rem 0.6667rem}
-details.settings summary{cursor:pointer;font-weight:700;font-size:0.9333rem;color:var(--muted)}
-details.settings .row{margin-top:0.5333rem}
-.row{margin-top:0.4rem}
-.row select{flex:1 1 6rem;min-width:0}
-.row button{flex:1 1 auto;padding:0.5333rem 0.6667rem}
-.status{margin-top:0.4rem;min-height:1.2rem;font-size:0.8667rem}
-.legend{font-size:0.7667rem;gap:0.6667rem;margin:0.4rem 0 0}
-.legend b{width:0.9333rem;height:0.3333rem}
-.nav{margin-top:0.5333rem}
-.facts{margin-top:0.4rem;font-size:0.8333rem}
+@keyframes pulse{from{box-shadow:0 0 0 2px var(--good)}to{box-shadow:0 0 0 2px transparent}}
+.lbl{font-weight:800}
+.legend{display:flex;gap:.45rem 1rem;flex-wrap:wrap;font-size:.76rem;color:var(--muted);margin:.55rem 0 0}
+.legend b{display:inline-block;width:.95rem;height:.34rem;vertical-align:middle;margin-right:.35rem;border-radius:.2rem}
+.nav{display:flex;gap:.5rem;margin-top:.55rem}
+.nav button{flex:1;padding:.55rem .4rem}
+.facts{font-size:.84rem;color:var(--muted);margin-top:.5rem}
 .facts:empty,.hist:empty{display:none}
-.hist{font-size:0.8rem;max-height:3.6rem;overflow-y:auto;margin-top:0.4rem}
-.plist{max-height:13.3333rem}
-#moves{flex-wrap:wrap;max-height:6.1333rem;overflow-y:auto}
-textarea{height:4rem}
-.tally{grid-template-columns:minmax(7.3333rem,10rem) 1fr 1.6rem}
-h2{font-size:1rem;margin-bottom:0.4rem}
-.verdict{font-size:1.0667rem}
-.open{margin-top:0.5333rem}
-.boardgrid{grid-template-columns:1.4667rem 1fr;gap:0.2667rem 0.4rem}
-.evalbar{width:1.4667rem}
-.c-explain,.c-coach{font-size:0.9333rem}
-@media (max-width:63.99rem),(max-height:35.99rem){
-  .legend,.open .tip.fine{display:none}
-}
-@media (min-width:64rem) and (min-height:36rem){
-  .wrap{padding:0.8rem 1.0667rem 1.6rem}
-  h1{font-size:1.4667rem}
-  .play,.rev{grid-template-columns:minmax(0,max(25.3333rem,calc(100vh - 12.6667rem))) minmax(21.3333rem,1fr)}
-  .play{grid-template-areas:"board setup" "board coach" "board tally"}
-  .rev{grid-template-areas:"board explain" "board moves" "board graph" "board tally"}
-  .c-board{grid-area:board;position:sticky;top:0.6667rem;align-self:start}
-  .c-setup{grid-area:setup}.c-coach{grid-area:coach}.c-tally{grid-area:tally}
-  .c-explain{grid-area:explain}.c-moves{grid-area:moves}.c-graph{grid-area:graph}.c-sum{grid-area:sum}
-  .plist{max-height:17.3333rem}
-  #openPanel{max-width:50.6667rem}
-}
+.hist{font:.8rem/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted);margin-top:.45rem;word-break:break-word;max-height:3.6rem;overflow-y:auto}
 
-/* no blue tap/selection tint on UI */
-*{-webkit-tap-highlight-color:transparent}
-button,summary,select,.tabs,.chip,.pstep,.evalbar,.pl,svg,.nav,.legend{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
-button:focus:not(:focus-visible),summary:focus:not(:focus-visible),select:focus:not(:focus-visible){outline:none}
-
-/* ===== review page ===== */
-#reviewPanel>.card{max-width:none}
-.c-board{order:1}.c-sum{order:2}.c-explain{order:3}.c-graph{order:4}.c-moves{order:5}.c-tally{order:6}
-.sumgrid{display:flex;align-items:center;gap:0.9333rem;flex-wrap:wrap}
-.acc{flex:none;text-align:center;min-width:5.6rem;padding:0.4rem 0.6667rem;border-radius:0.5333rem;background:var(--bg)}
-.acc strong{display:block;font:800 2rem/1 system-ui,sans-serif;color:var(--good)}
-.acc small{display:block;color:var(--muted);font-size:0.7667rem;margin-top:0.2rem}
-.elo{flex:none;text-align:center;min-width:6.4rem;padding:0.4rem 0.6667rem;border-radius:0.5333rem;background:var(--bg)}
-.elo strong{display:block;font:800 1.4667rem/1 system-ui,sans-serif;color:var(--blue)}
-.elo small{display:block;color:var(--muted);font-size:0.7667rem;margin-top:0.2667rem}
-.elodetail{font-size:0.7667rem;color:var(--muted);margin-top:0.5333rem;line-height:1.4;border-top:1px solid var(--line);padding-top:0.4667rem}
-.pills{display:flex;flex-wrap:wrap;gap:0.3333rem 0.8rem;font-size:0.8667rem}
-.pill{display:inline-flex;align-items:center;gap:0.4rem;color:var(--muted);white-space:nowrap}
-.pill b{color:var(--ink)}
-.pill i{width:0.6667rem;height:0.6667rem;border-radius:50%;display:inline-block}
-#moves{display:block;max-height:13.3333rem;overflow-y:auto;padding:0}
-.mrow{display:grid;grid-template-columns:2rem 1fr 1fr;gap:0.2667rem;margin-bottom:0.2667rem;align-items:center}
-.mno{color:var(--muted);font-size:0.8333rem;font-weight:700;text-align:right;padding-right:0.2667rem}
-#moves .chip{width:100%;text-align:left;padding:0.4rem 0.5333rem;border:0;border-left:4px solid var(--line);border-radius:0.3333rem;background:var(--bg);color:var(--ink)}
-#moves .chip.inacc{border-left-color:#f7c631;color:var(--ink)}
-#moves .chip.mistake{border-left-color:#ffa459;background:var(--bg);color:var(--ink)}
-#moves .chip.blunder{border-left-color:#fa412d;background:var(--bg);color:var(--ink)}
-#moves .chip.brilliant{border-left-color:#1baca6;background:var(--bg);color:var(--ink)}
-#moves .chip.miss{border-left-color:#e06c5a;background:var(--bg);color:var(--ink)}
-#moves .chip.book{border-left-color:#a88865;background:var(--bg);color:var(--ink)}
-#moves .chip.great{border-left-color:#749bbf;background:var(--bg);color:var(--ink)}
-#moves .chip.sel{outline:2px solid #81b64c;outline-offset:-1px;background:var(--btn)}
-.c-graph svg{border-radius:0.4rem}
-#rinput textarea{height:4.6667rem}
-@media (min-width:64rem) and (min-height:36rem){
-  .rev{grid-template-areas:"board sum" "board explain" "board graph" "board moves" "board tally"}
-  #moves{max-height:15.3333rem}
-}
-
-.rin .rhead{display:flex;align-items:center;justify-content:space-between;gap:0.5333rem}
-.rin h2{margin:0}
-.rin textarea{height:6.4rem;margin-top:0.6667rem;margin-bottom:0;background:var(--bg);border-radius:0.5333rem;padding:0.6667rem}
-.rctl{display:flex;gap:0.5333rem;margin-top:0.5333rem}
-.rctl>*{flex:1;min-width:0}
-button.ghost{background:transparent;border:1px solid var(--line);color:var(--ink);padding:0.4667rem 0.9333rem}
-.rin .status{margin-top:0.5333rem}
-.gamepick{margin-top:0.6667rem;padding:0.5333rem;border:1px solid var(--line);border-radius:0.5333rem;background:var(--bg)}
-.gphead{display:flex;gap:0.5333rem;align-items:center}
-.gphead input{flex:1;min-width:0;background:var(--panel);border:1px solid var(--line);border-radius:0.4rem;color:var(--ink);padding:0.5333rem 0.6667rem;font:inherit;appearance:none;-webkit-appearance:none}
-.gphead input:focus-visible{outline:2px solid #81b64c;outline-offset:2px}
-.gphead button{flex:none;padding:0.5333rem 0.6667rem}
-.gamelist{max-height:18.6667rem;overflow-y:auto;margin-top:0.5333rem;border-top:1px solid var(--line)}
-.gamerow{display:block;width:100%;text-align:left;background:transparent;border:0;border-bottom:1px solid var(--line);border-radius:0;color:var(--ink);padding:0.5333rem 0.4rem;font:inherit;cursor:pointer}
-.gamerow:hover,.gamerow:focus-visible{background:var(--btn)}
-.gamerow:active{transform:none;border-bottom-width:1px}
-.gamerow .gmain{display:block;font-weight:700;font-size:0.9rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.gamerow .gsub{display:block;color:var(--muted);font-size:0.8rem;margin-top:0.1333rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.gamecount{font-size:0.8rem;color:var(--muted);margin-top:0.4rem}
-#rinput textarea{height:6.4rem}
-.rin{margin-bottom:0.6667rem}
-#results{margin-top:0.1333rem}
-
-/* ===== fluid sizing: everything scales with the window ===== */
-html{font-size:clamp(.9375rem,.875rem + .25vw,1.1rem);-webkit-text-size-adjust:100%;text-size-adjust:100%}
-:root{--pad:clamp(.5rem,1.4vw,1.5rem);--gap:clamp(.5rem,1vw,1rem)}
-body{min-height:100vh;min-height:100dvh}
-.wrap{max-width:120rem;margin-inline:auto;
-  padding:var(--pad) max(var(--pad),env(safe-area-inset-right)) calc(var(--pad)*2) max(var(--pad),env(safe-area-inset-left))}
-.top{flex-wrap:wrap}
-.tabs{flex:1 1 15rem;max-width:28rem}
-.lay{gap:var(--gap)}
-.card{padding:clamp(.55rem,1vw,.9rem)}
-/* single column: the board never grows taller than the screen, so landscape phones still see all of it */
-.boardgrid{width:min(100%,max(17rem,calc(100vh - 9rem)));width:min(100%,max(17rem,calc(100svh - 9rem)));margin-inline:auto}
-.gamelist{max-height:min(18.7rem,40vh);max-height:min(18.7rem,40dvh)}
-.plist{max-height:min(13.5rem,32vh);max-height:min(13.5rem,32dvh)}
-#moves{max-height:min(13.5rem,32vh);max-height:min(13.5rem,32dvh)}
-/* ===== reserve space so the play board never jumps ===== */
-/* keep the scrollbar gutter even when the page isn't scrolling, so page width (and board width) never changes */
-html{overflow-y:scroll}
-@supports (scrollbar-gutter:stable){html{overflow-y:auto;scrollbar-gutter:stable}}
-/* status line: always room for two lines */
-#pstatus{min-height:calc(2 * 1.45 * 0.8667rem)}
-/* download bar + text above the board: always occupy their space, just invisible until used */
-#pprog{display:block!important;visibility:hidden}
-#pprog[style*="block"]{visibility:visible}
-#pprogtxt{display:block!important;visibility:hidden;min-height:1.2rem}
-#pprogtxt[style*="block"]{visibility:visible}
-/* button row under the board keeps its height when Take back / Continue / Review appear */
-.c-board .nav{min-height:2.75rem}
-.hide{display:none!important}
-@media (min-width:64rem) and (min-height:36rem){
-  /* board column follows window height (square board); the side column can never be wider than it */
-  .play,.rev{
-    --bw:min(62%,max(20rem,calc(100vh - 12.7rem)));
-    --bw:min(62%,max(20rem,calc(100svh - 12.7rem)));
-    grid-template-columns:minmax(0,var(--bw)) minmax(16rem,min(56rem,calc(var(--bw) - 1.8667rem),calc(100% - var(--bw) - var(--gap))));
-    justify-content:center;gap:var(--gap)}
-  .boardgrid{width:100%}
-  .c-board{position:static}
-  #openPanel{max-width:min(100%,56rem)}
-  #results{max-width:none}
-  #moves{max-height:min(15.3rem,34dvh)}
-  .plist{max-height:min(17rem,36dvh)}
-}
-/* keep the board in view while the side panel scrolls, but only when the window is tall enough to hold it */
-@media (min-width:64rem) and (min-height:40rem){
-  .c-board{position:sticky;top:var(--pad)}
-}
-/* comfortable touch targets */
-@media (pointer:coarse){
-  .tabs button,.row button,.row select,.nav button,.rctl>*,.pctl button,#go,.pn input,.pn select{min-height:2.75rem}
-}
-/* ===== PLAY tab: the board is pinned, everything else scrolls ===== */
+/* ---------- PLAY ---------- */
+.ptitle{display:none}
+.c-setup .cols{margin-bottom:.55rem}
+#pnew{width:100%;padding:.85rem 1rem;font-size:1.15rem;font-weight:800;border-bottom-width:5px;border-radius:.65rem}
+#pnew:active:not(:disabled){border-bottom-width:3px}
+.c-setup .row button{padding:.6rem .5rem;font-size:.9rem}
 .side{display:flex;flex-direction:column;gap:var(--gap);min-width:0}
-.side>.card{flex:none;min-width:0}
-body[data-tab="play"]{height:100vh;height:100svh;overflow:hidden}
-body[data-tab="play"] .wrap{height:100vh;height:100svh;display:flex;flex-direction:column}
-body[data-tab="play"] .top,body[data-tab="play"] details.settings{flex:none}
-/* settings open as an overlay so they can't push the board */
-body[data-tab="play"] details.settings{position:relative;z-index:30}
-body[data-tab="play"] details.settings .row{position:absolute;left:0;right:0;top:100%;margin:0;padding:.6rem;background:var(--panel);border-radius:0 0 .5rem .5rem;box-shadow:0 10px 24px rgba(0,0,0,.45)}
-body[data-tab="play"] #playPanel{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;gap:var(--gap)}
-body[data-tab="play"] .c-board{flex:none;position:static}
-body[data-tab="play"] .boardgrid{width:min(100%,max(15rem,calc(100vh - 24rem)));width:min(100%,max(15rem,calc(100svh - 24rem)))}
-body[data-tab="play"] .side{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
-/* landscape / wide: board left (fixed), scrolling panel right */
-@media (min-width:40rem) and (orientation:landscape),(min-width:64rem) and (min-height:36rem){
-  body[data-tab="play"] #playPanel{
-    --bw:min(60%,max(12rem,calc(100vh - 8rem)));--bw:min(60%,max(12rem,calc(100svh - 8rem)));
-    display:grid;grid-template-areas:"board side";grid-template-rows:minmax(0,1fr);
-    grid-template-columns:minmax(0,var(--bw)) minmax(12rem,1fr);justify-content:center}
-  body[data-tab="play"] .c-board{grid-area:board;align-self:start;max-height:100%;overflow-y:auto}
-  body[data-tab="play"] .side{grid-area:side}
-  body[data-tab="play"] .boardgrid{width:min(100%,max(12rem,calc(100vh - 11rem)));width:min(100%,max(12rem,calc(100svh - 11rem)))}
-}
-@media (min-width:64rem) and (min-height:36rem){
-  body[data-tab="play"] #playPanel{
-    --bw:min(62%,max(20rem,calc(100vh - 12.7rem)));--bw:min(62%,max(20rem,calc(100svh - 12.7rem)));
-    grid-template-columns:minmax(0,var(--bw)) minmax(16rem,min(56rem,calc(100% - var(--bw) - var(--gap))))}
-  body[data-tab="play"] .boardgrid{width:100%}
-}
-.fsbtn{flex:none;margin-left:auto;font-size:.8rem;padding:.4rem .6rem;white-space:nowrap}
-body.cssfs .top h1,body.cssfs .top .tabs{display:none}
-body.cssfs .top{justify-content:flex-end}
-
-/* ===== Learn tab ===== */
-#learnPanel{max-width:min(100%,40rem);margin-inline:auto}
-#learnPanel h2{margin:0 0 .2rem;font-size:1.25rem}
-.lcat{font-weight:800;font-size:.8rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:.9rem 0 .4rem}
-.lcat:first-child{margin-top:.3rem}
-#lboard{touch-action:none}
-.lwrap{width:min(100%,max(17rem,calc(100svh - 18rem)));margin:.6rem auto}
-.lmeta{font-weight:700;margin:.4rem 0 0}
-#lstatus{min-height:calc(2 * 1.45 * .9rem);margin-top:.4rem}
-#lstatus.good{color:var(--good)}#lstatus.bad{color:var(--bad)}
-.lwrap.building #lboard{pointer-events:none;cursor:progress}
-.lwrap.building{position:relative}
-.lprog{display:none;height:.4rem;background:var(--line);border-radius:.2rem;overflow:hidden;margin-top:.5rem}
-.lprog i{display:block;height:100%;width:0;background:#81b64c;transition:width .15s}
-.dtag{font-weight:800;padding:.05rem .5rem;border-radius:.6rem;font-size:.8rem;color:#fff;margin-left:.2rem}
-.dtag.d0{background:#5f8f2c}.dtag.d1{background:#c77a0c}.dtag.d2{background:#d6341f}
-.lsel{font:inherit;padding:.5rem;border-radius:.4rem}
-.lseed{width:7rem;font:inherit;padding:.5rem;border:1px solid var(--line);border-radius:.4rem;background:var(--bg);color:var(--ink)}
-@media (max-width:30rem){.tabs button{font-size:.8rem;padding-inline:.15rem}}
-
-/* ---- Opening trainer ---- */
-.seg{display:flex;gap:.4rem;margin-bottom:.8rem}
-.seg button{flex:1}
-.seg button.on{background:#81b64c;border-bottom-color:#45753c;color:#fff}
-#tprog{display:block}
-#phints{margin-top:.4rem}
-.hl{display:flex;gap:.5333rem;align-items:flex-start;margin:.3rem 0;font-size:.9rem;line-height:1.35}
+.side>.card{flex:none}
+#phints{margin-top:.5rem}
+.hl{display:flex;gap:.55rem;align-items:flex-start;margin:.3rem 0;font-size:.9rem;line-height:1.35}
 .hl i{flex:none;width:1.1rem;height:.4rem;border-radius:.2rem;margin-top:.5rem}
 .hl.none{opacity:.7}
-#tstatus.warn{color:var(--warn)}#tstatus.good{color:var(--good)}#tstatus.bad{color:var(--bad)}
-.rrow{display:flex;align-items:center;gap:.5333rem;background:var(--bg);border:1px solid var(--line);border-radius:.4rem;padding:.5333rem .6667rem;margin-bottom:.4rem}
+.c-coach{font-size:.95rem}
+.verdict{font:800 1.12rem/1.3 "Segoe UI",system-ui,sans-serif;margin:0 0 .3rem}
+.verdict.good{color:var(--good)}.verdict.bad{color:var(--bad)}.verdict.warn{color:var(--warn)}
+.evals{color:var(--muted);font-size:.86rem;margin-bottom:.5rem}
+.plan,.flaw{border-radius:.5rem;padding:.55rem .75rem;margin:.55rem 0;border-left:4px solid var(--good);background:rgba(129,182,76,.1)}
+.flaw{border-left-color:var(--bad);background:rgba(250,65,45,.1)}
+.pv{font:.84rem/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted);word-break:break-word;margin-top:.2rem}
+.tally{display:grid;grid-template-columns:minmax(7rem,12rem) 1fr 1.6rem;gap:.5rem .7rem;align-items:center;font-size:.9rem}
+.tally .t{height:.65rem;background:var(--deep);border-radius:1rem;overflow:hidden}
+.tally .t i{display:block;height:100%;background:var(--bad);border-radius:1rem}
+.tally>div:last-child{font-weight:800;text-align:right}
+
+/* predictions */
+.preds{margin-top:.75rem;padding-top:.75rem;border-top:1px solid var(--line)}
+.pctl{display:flex;gap:.4rem;margin:.55rem 0}
+.pctl button{flex:1;padding:.5rem .3rem;font-size:.86rem}
+.pctl .wide{flex:2}
+.pchart{width:100%;height:auto;display:block;background:var(--deep);border-radius:.5rem}
+.pbar{cursor:pointer}
+.plist{max-height:min(14rem,32dvh);overflow-y:auto;position:relative;margin-top:.3rem}
+.pstep{display:block;width:100%;text-align:left;font-size:.9rem;padding:.5rem .7rem;margin:.3rem 0;border-radius:.45rem;background:var(--deep);color:var(--ink);border:1px solid var(--line);border-left:4px solid var(--line);font-weight:600}
+.pstep small{display:block;color:var(--muted);font-weight:500;font-size:.82rem}
+.pstep .who{font-weight:800}
+.pstep.opp{border-left-color:var(--bad)}.pstep.opp .who{color:var(--bad)}
+.pstep.me{border-left-color:var(--blue)}.pstep.me .who{color:var(--blue)}
+.pstep.on{outline:2px solid var(--good);outline-offset:-1px}
+.pback{margin-top:.5rem;width:100%}
+.pact{padding:.4rem .7rem}
+
+/* ---------- REVIEW ---------- */
+.rin{margin-bottom:var(--gap)}
+.rhead{display:flex;align-items:center;justify-content:space-between;gap:.5rem}
+.rin h2{margin:0}
+.rin textarea{margin-top:.75rem;height:6.5rem}
+.rctl{display:grid;grid-template-columns:1fr 1fr;gap:.55rem;margin-top:.55rem}
+.rctl>*{min-width:0}
+.rctl button{font-size:.92rem;padding:.55rem .5rem}
+#go{width:100%;margin-top:.7rem;padding:.8rem 1rem;font-size:1.05rem;font-weight:800}
+.gamepick{margin-top:.75rem;padding:.6rem;border:1px solid var(--line);border-radius:.6rem;background:var(--deep)}
+.gphead{display:flex;gap:.5rem;align-items:center}
+.gphead input{flex:1;background:var(--panel)}
+.gphead button{flex:none;padding:.55rem .85rem}
+.gamelist{max-height:min(18.7rem,40dvh);overflow-y:auto;margin-top:.5rem;border-top:1px solid var(--line)}
+.gamerow{display:block;width:100%;text-align:left;background:transparent;border:0;border-bottom:1px solid var(--line);border-radius:0;color:var(--ink);padding:.55rem .45rem;font-weight:500;cursor:pointer}
+.gamerow:hover,.gamerow:focus-visible{background:var(--raise);filter:none}
+.gamerow:active{transform:none;border-bottom-width:1px}
+.gamerow .gmain{display:block;font-weight:700;font-size:.92rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gamerow .gsub{display:block;color:var(--muted);font-size:.8rem;margin-top:.1rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gamecount{font-size:.8rem;color:var(--muted);margin-top:.4rem}
+
+.rev .c-board .nav button{padding:.7rem .4rem}
+.sumgrid{display:flex;flex-wrap:wrap;gap:.6rem}
+.sumgrid>.acc,.sumgrid>.elo{flex:1 1 8rem}
+.acc,.elo{text-align:center;padding:.7rem .8rem;border-radius:.65rem;background:var(--deep)}
+.acc strong{display:block;font:800 2.3rem/1 "Segoe UI",system-ui,sans-serif;color:var(--good)}
+.elo strong{display:block;font:800 1.5rem/1.1 "Segoe UI",system-ui,sans-serif;color:var(--blue);padding:.3rem 0}
+.acc small,.elo small{display:block;color:var(--muted);font-size:.78rem;margin-top:.3rem;font-weight:600}
+.elodetail{font-size:.78rem;color:var(--muted);margin-top:.7rem;line-height:1.45;border-top:1px solid var(--line);padding-top:.55rem}
+.pills{flex:1 1 100%;display:grid;grid-template-columns:repeat(auto-fit,minmax(9.5rem,1fr));gap:.4rem .9rem;font-size:.88rem}
+.pill{display:inline-flex;align-items:center;gap:.45rem;color:var(--muted);white-space:nowrap}
+.pill b{color:var(--ink);min-width:1.1rem;text-align:right;order:-1}
+.pill i{width:.7rem;height:.7rem;border-radius:50%;display:inline-block;flex:none;order:-2}
+#copyreport{width:100%;margin-top:.8rem}
+#graph{width:100%;height:auto;display:block;cursor:pointer;border-radius:.5rem}
+#moves{display:block;max-height:min(15rem,34dvh);overflow-y:auto;padding:0}
+.mrow{display:grid;grid-template-columns:2.2rem 1fr 1fr;gap:.25rem;margin-bottom:.25rem;align-items:center}
+.mno{color:var(--muted);font-size:.82rem;font-weight:700;text-align:right;padding-right:.3rem}
+.chip{flex:none;padding:.35rem .7rem;border-radius:.4rem;border:1px solid var(--line);background:var(--deep);font-size:.88rem;font-weight:600;color:var(--ink)}
+#moves .chip{width:100%;text-align:left;padding:.42rem .55rem;border:0;border-left:4px solid var(--line);border-radius:.35rem;transition:none}
+#moves .chip:active{transform:none;border-bottom-width:0}
+#moves .chip.inacc{border-left-color:#f7c631}
+#moves .chip.mistake{border-left-color:#ffa459}
+#moves .chip.blunder{border-left-color:#fa412d}
+#moves .chip.brilliant{border-left-color:#1baca6}
+#moves .chip.miss{border-left-color:#e06c5a}
+#moves .chip.book{border-left-color:#a88865}
+#moves .chip.great{border-left-color:#749bbf}
+#moves .chip.sel{outline:2px solid var(--good);outline-offset:-1px;background:var(--raise)}
+#openlist{display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.6rem}
+#openlist .chip{border-radius:2rem;border-bottom-width:1px}
+.ecochip{display:inline-block;font-size:.74rem;font-weight:800;padding:.05rem .4rem;border-radius:.3rem;background:var(--btn);color:var(--btnink);margin-left:.25rem;vertical-align:1px}
+.ecochip.gam{background:#f7c631;color:#2a1a08}
+.ecochip.def{background:#6aa6e6;color:#10202f}
+
+/* ---------- LEARN / OPENINGS / ENGINE ---------- */
+#learnPanel,#enginePanel{max-width:44rem;margin-inline:auto}
+#openPanel{max-width:72rem;margin-inline:auto}
+#reviewPanel{max-width:none}
+.lcat{font-weight:800;font-size:.95rem;color:var(--soft);margin:1.1rem 0 .15rem}
+.lcat:first-child{margin-top:.2rem}
+#learnPanel h2{font-size:1.3rem;margin-bottom:.25rem}
+#llist{display:grid;gap:.5rem;margin-top:.6rem}
+.botrow,.ores button{display:block;width:100%;text-align:left;background:var(--deep);color:var(--ink);border:0;border-left:4px solid transparent;
+  border-radius:.55rem;padding:.75rem .9rem;font-weight:500;cursor:pointer;transition:background .12s}
+.botrow:hover,.botrow:focus-visible,.ores button:hover{background:var(--raise);filter:none}
+.botrow:active,.ores button:active{transform:none;border-bottom-width:0}
+.botrow .bname{display:block;font-weight:800}
+.botrow .bsub{display:block;color:var(--muted);font-size:.84rem;margin-top:.15rem}
+.botrow.sel{border-left-color:var(--good);background:var(--raise)}
+#llist .botrow{position:relative;padding-right:2.2rem}
+#llist .botrow::after{content:"\203A";position:absolute;right:.9rem;top:50%;transform:translateY(-50%);color:var(--muted);font-size:1.5rem;line-height:1}
+#ebots{display:grid;gap:.5rem;margin-top:.7rem}
+.dtag{font-weight:800;padding:.05rem .5rem;border-radius:.6rem;font-size:.78rem;color:#fff;margin-left:.3rem}
+.dtag.d0{background:#5f8f2c}.dtag.d1{background:#c77a0c}.dtag.d2{background:#d6341f}
+.phead{display:flex;align-items:center;gap:.7rem;margin-bottom:.8rem}
+.phead button{flex:none;padding:.5rem .85rem}
+.phead b{font-size:1.05rem;min-width:0}
+.lmeta{font-weight:700;margin:0 0 .4rem}
+.lwrap{width:min(100%,max(16rem,calc(100dvh - 24rem)));margin:.2rem auto .5rem}
+.lwrap.building #lboard{pointer-events:none;cursor:progress}
+.lprog{display:none;height:.45rem;background:var(--deep);border-radius:1rem;overflow:hidden;margin-top:.5rem}
+.lprog i{display:block;height:100%;width:0;background:var(--good);transition:width .15s}
+#tprog{display:block}
+#lstatus{min-height:calc(2*1.45*.9rem);margin-top:.3rem}
+#lstatus.good,#tstatus.good{color:var(--good)}
+#lstatus.bad,#tstatus.bad{color:var(--bad)}
+#tstatus.warn{color:var(--warn)}
+.lseed{width:7rem}
+.seg{display:flex;gap:.2rem;margin-bottom:var(--gap);padding:.25rem;background:var(--panel);border-radius:.7rem;max-width:22rem}
+.seg button{flex:1;background:none;border:0;border-radius:.5rem;color:var(--muted);padding:.55rem .8rem}
+.seg button:active:not(:disabled){transform:none}
+.seg button.on{background:var(--good);color:#fff;box-shadow:inset 0 -3px 0 var(--goodb)}
+.ofilters{display:grid;grid-template-columns:1fr 1fr;gap:.55rem;margin:.6rem 0}
+.ofilters input,.ofilters select:last-of-type{grid-column:1/-1}
+.ores{max-height:min(34rem,60dvh);overflow-y:auto}
+.ores button{display:flex;justify-content:space-between;align-items:center;gap:.55rem;margin:0 0 .3rem;font-weight:600;font-size:.92rem}
+.ores button small{color:var(--muted);font-weight:700;white-space:nowrap}
+.olines{font-size:.92rem;line-height:1.75;margin:.7rem 0}
+.olines b{background:var(--hl);color:#10151a;border-radius:.2rem;padding:0 .25rem}
+#odetail .row:first-of-type{margin-top:.7rem}
+#odetail .row>button{padding:.6rem .5rem;font-size:1.05rem}
+#odetail .row>select{flex:1 1 9rem}
+.tsum{font-weight:700;margin:.25rem 0 .6rem}
+.tstart{display:flex;flex-wrap:wrap;gap:.4rem;margin:.6rem 0}
+.tstart button{font-size:.85rem;padding:.45rem .75rem}
+.rrow{display:flex;align-items:center;gap:.6rem;background:var(--deep);border-radius:.55rem;padding:.55rem .7rem;margin-bottom:.4rem}
 .rrow .rinfo{flex:1;min-width:0}
 .rrow .rname{display:block;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.rrow .rsub{display:block;color:var(--muted);font-size:.8333rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.rrow button{padding:.4rem .7rem;font-size:.85rem}
+.rrow .rsub{display:block;color:var(--muted);font-size:.83rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rrow button{padding:.4rem .75rem;font-size:.85rem}
 .rrow .due{color:var(--warn);font-weight:700}
 .rrow .new{color:var(--blue);font-weight:700}
-.tstart{display:flex;flex-wrap:wrap;gap:.4rem;margin:.5333rem 0}
-.tstart button{font-size:.85rem;padding:.4667rem .7rem}
-.tsum{font-weight:700;margin:.2667rem 0 .5333rem}
+#phints{margin-top:.5rem}
+
+/* ---------- touch ---------- */
+@media (pointer:coarse){
+  .row button,.row select,.row input,.nav button,.rctl>*,.pctl button,#go,.sbody button,.sbody select,.sbody input,.field select,.field input{min-height:2.75rem}
+}
+
+/* =====================================================================
+   MOBILE · PLAY: board pinned, panel below scrolls
+   ===================================================================== */
+body[data-tab="play"]{height:100vh;height:100dvh;overflow:hidden}
+body[data-tab="play"] .wrap{height:100vh;height:100dvh;display:flex;flex-direction:column;padding-inline:0;padding-bottom:calc(var(--tabH) + var(--sab))}
+body[data-tab="play"] #playPanel{flex:1;min-height:0;display:flex;flex-direction:column;gap:0}
+body[data-tab="play"] .c-board{flex:none;padding:.35rem max(.6rem,env(safe-area-inset-left)) 0 max(.6rem,env(safe-area-inset-right))}
+body[data-tab="play"] .boardgrid{--B:max(14rem,min(calc(100vw - 1.2rem - 1.9rem),calc(100dvh - var(--topH) - var(--tabH) - var(--sat) - var(--sab) - 22rem)))}
+body[data-tab="play"] .pl{min-height:2.3rem}
+body[data-tab="play"] .c-legend{display:none}
+body[data-tab="play"] .open{margin-top:.35rem;padding:.4rem .7rem;font-size:.84rem}
+body[data-tab="play"] .open .tip{display:none}
+body[data-tab="play"] .nav{margin-top:.4rem}
+body[data-tab="play"] .nav:not(:has(button:not(.hide))){display:none}
+body[data-tab="play"] .nav button{padding:.45rem .4rem;font-size:.9rem}
+body[data-tab="play"] .facts,body[data-tab="play"] .hist{display:none}
+body[data-tab="play"] .side{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:.6rem max(.6rem,env(safe-area-inset-left)) .8rem max(.6rem,env(safe-area-inset-right))}
+body[data-tab="play"] .c-setup{padding:.8rem}
+body[data-tab="play"] #pnew{padding:.7rem 1rem;font-size:1.08rem}
+
+/* review on mobile: board pinned under the top bar, panels scroll beneath it */
+.rev .side{display:grid;gap:var(--gap)}
+.rev .c-board{position:sticky;top:calc(var(--topH) + var(--sat));z-index:5;background:var(--bg);margin:0 -.6rem;padding:.4rem .6rem .5rem;box-shadow:0 .55rem .5rem -.45rem rgba(0,0,0,.4)}
+.rev .boardgrid{--B:max(14rem,min(calc(100vw - 1.2rem - 1.9rem),calc(100dvh - var(--topH) - var(--sat) - var(--sab) - var(--tabH) - 22rem)))}
+.rev .open{margin-top:.4rem;padding:.4rem .7rem;font-size:.84rem}
+.rev .open .tip{display:none}
+.rev .nav{margin-top:.45rem}
+.rev .legend{margin-top:.4rem;flex-wrap:nowrap;overflow-x:auto;white-space:nowrap;scrollbar-width:none}
+.rev .legend::-webkit-scrollbar{display:none}
+.rev .legend span{flex:none}
+.c-board .open .tip.fine{display:none}
+
+/* learn / trainer / opening boards on mobile */
+.pz{display:block}
+#obboard{width:min(100%,max(16rem,calc(100dvh - 24rem)));margin:0 auto .5rem}
+#oexplore{display:grid;gap:var(--gap);align-content:start}
+#otrain{display:grid;gap:var(--gap);align-content:start}
+
+/* =====================================================================
+   RAIL LAYOUT (desktop, tablet landscape, landscape phones)
+   ===================================================================== */
+@media (min-width:56rem),(orientation:landscape) and (max-height:34rem) and (min-width:32rem){
+  :root{--pad:1rem;--gap:.8rem}
+  .app{padding-left:calc(var(--rail) + env(safe-area-inset-left))}
+  .rail{top:0;bottom:0;right:auto;left:0;width:calc(var(--rail) + env(safe-area-inset-left));height:auto;flex-direction:column;align-items:stretch;gap:.8rem;
+    padding:.8rem .45rem .8rem calc(.45rem + env(safe-area-inset-left));box-shadow:1px 0 0 rgba(0,0,0,.28);overflow-y:auto;overflow-x:hidden;scrollbar-width:none}
+  .brand{justify-content:center;padding:.1rem 0 .3rem}
+  .brand h1{display:none}
+  .tabs{position:static;display:flex;flex-direction:column;gap:.2rem;height:auto;padding:0;background:none;box-shadow:none}
+  .tabs button{padding:.6rem .1rem .5rem;border-radius:.6rem;font-size:.7rem}
+  .tabs button.on{background:var(--bg);color:var(--ink)}
+  .tabs button.on svg{color:var(--good)}
+  .tabs button.on::before{top:22%;bottom:22%;left:0;right:auto;width:3px;height:auto;border-radius:0 3px 3px 0}
+  .tabs button:hover:not(.on){background:rgba(255,255,255,.05)}
+  .railfoot{margin:auto 0 0;flex-direction:column;align-items:stretch;gap:.2rem}
+  .railbtn,.settings summary{width:auto;height:auto;padding:.55rem .1rem .45rem;border-radius:.6rem;font-size:.7rem}
+  .railbtn span,.settings summary span{display:block}
+  .sbody{left:calc(var(--rail) + env(safe-area-inset-left) + .6rem);right:auto;top:auto;bottom:.8rem;width:min(26rem,calc(100vw - var(--rail) - 1.5rem));max-height:calc(100dvh - 1.6rem)}
+  .wrap{max-width:none;padding:var(--pad)}
+  body[data-tab="play"] .wrap,.wrap{padding:var(--pad)}
+  body[data-tab="play"] .wrap{padding-bottom:var(--pad)}
+  body.cssfs{--rail:0px}
+  body.cssfs .rail{left:auto;right:.5rem;top:.5rem;bottom:auto;width:auto;height:auto;padding:0;background:transparent}
+
+  /* shared sizing: board follows the window height */
+  :root{--reserve:11.2rem;--preserve:6.8rem;--sidemin:18rem}
+  .play,.rev{--B:max(15rem,min(calc(100vw - var(--rail) - var(--sidemin) - 2*var(--pad) - var(--gap) - 1.9rem - 1rem),calc(100dvh - var(--reserve))))}
+
+  /* PLAY */
+  body[data-tab="play"] #playPanel{display:grid;grid-template-columns:auto minmax(var(--sidemin),27rem);gap:1.2rem;justify-content:center;align-items:start;flex:1;min-height:0}
+  body[data-tab="play"] .c-board{padding:0;max-height:calc(100dvh - 2*var(--pad));overflow-y:auto;scrollbar-width:none}
+  body[data-tab="play"] .boardgrid{--B:max(15rem,min(calc(100vw - var(--rail) - var(--sidemin) - 2*var(--pad) - 1.2rem - 1.9rem - 1rem),calc(100dvh - var(--preserve))));width:calc(var(--B) + 1.9rem)}
+  body[data-tab="play"] .pl{min-height:2.2rem}
+  body[data-tab="play"] .c-legend{display:block}
+  body[data-tab="play"] .c-legend .legend{margin:0;gap:.5rem 1.1rem}
+  body[data-tab="play"] .open .tip{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  body[data-tab="play"] .open{padding:.55rem .8rem;font-size:.9rem}
+  body[data-tab="play"] .open .tip{display:block}
+  body[data-tab="play"] .open .tip.fine{display:none}
+  body[data-tab="play"] .nav{margin-top:.45rem}
+  body[data-tab="play"] .nav:not(:has(button:not(.hide))){display:none}
+  body[data-tab="play"] .nav button{padding:.5rem .5rem;font-size:1rem}
+  body[data-tab="play"] .facts{display:block}
+  body[data-tab="play"] .facts:empty{display:none}
+  body[data-tab="play"] .hist{display:block}
+  body[data-tab="play"] .hist:empty{display:none}
+  body[data-tab="play"] .side{padding:0;max-height:calc(100dvh - 2*var(--pad));background:var(--panel);border-radius:.8rem;gap:0;overflow-y:auto}
+  body[data-tab="play"] .side>.card{background:none;border-radius:0;padding:1rem 1.1rem}
+  body[data-tab="play"] .side>.card+.card{border-top:1px solid var(--line)}
+  /* board column holds ONLY the board + names; everything else lives in the right column */
+  body[data-tab="play"] #playPanel{grid-template-rows:auto auto auto auto minmax(0,1fr);column-gap:1.2rem;row-gap:0;height:calc(100dvh - 2*var(--pad));flex:none}
+  body[data-tab="play"] .c-board{display:contents}
+  body[data-tab="play"] .boardgrid{grid-column:1;grid-row:1/-1;align-self:start}
+  body[data-tab="play"] .open{grid-column:2;grid-row:1;margin:0 0 .6rem}
+  body[data-tab="play"] .nav{grid-column:2;grid-row:2;margin:0 0 .6rem}
+  body[data-tab="play"] .facts{grid-column:2;grid-row:3;margin:0 0 .6rem}
+  body[data-tab="play"] .hist{grid-column:2;grid-row:4;margin:0 0 .6rem}
+  body[data-tab="play"] .side{grid-column:2;grid-row:5;align-self:start;max-height:100%}
+  body[data-tab="play"] #popen{display:block!important}
+  body[data-tab="play"] #popen.hide{display:none!important}
+  .ptitle{display:block;font-size:1.25rem;margin-bottom:.8rem}
+  body[data-tab="play"] #pnew{padding:.9rem 1rem;font-size:1.2rem}
+
+  /* REVIEW */
+  .rev{grid-template-columns:auto minmax(var(--sidemin),30rem);justify-content:center;align-items:start;gap:1.2rem}
+  .rev .c-board{position:sticky;top:var(--pad);margin:0;padding:0;background:none;box-shadow:none;z-index:auto}
+  .rev .open{margin-top:.55rem;padding:.55rem .8rem;font-size:.9rem}
+  .rev .open .tip{display:block}
+  .rev .nav{margin-top:.55rem}
+  .rev .boardgrid{--B:max(15rem,min(calc(100vw - var(--rail) - var(--sidemin) - 2*var(--pad) - 1.2rem - 1.9rem - 1rem),calc(100dvh - 9rem)));width:calc(var(--B) + 1.9rem)}
+  .rev .legend{flex-wrap:wrap;overflow:visible;white-space:normal}
+  .rev .side{gap:0;background:var(--panel);border-radius:.8rem;overflow:hidden}
+  .rev .side>.card{background:none;border-radius:0;padding:1rem 1.1rem}
+  .rev .side>.card+.card{border-top:1px solid var(--line)}
+  #reviewPanel .rin{max-width:46rem;margin-inline:auto}
+  #reviewPanel:has(#results:not(.hide)) .rin{max-width:calc(var(--B,40rem) + 1.9rem + 1.2rem + 30rem);max-width:none}
+
+  /* LEARN puzzle / trainer: board left, controls right */
+  .pz{display:grid;grid-template-columns:minmax(0,min(36rem,calc(100dvh - 11rem))) minmax(15rem,1fr);gap:1.3rem;align-items:start}
+  .pz .lwrap{width:100%;margin:0}
+  #learnPanel:has(#lpuz:not(.hide)),#openPanel:has(#tdrill:not(.hide)){max-width:64rem}
+  #learnPanel:has(#lhome:not(.hide)){max-width:44rem}
+  #llist{grid-template-columns:repeat(auto-fill,minmax(18rem,1fr))}
+  #llist .lcat{grid-column:1/-1}
+  #learnPanel:has(#lhome:not(.hide)){max-width:56rem}
+
+  /* OPENINGS explorer: list left, board right */
+  #oexplore{grid-template-columns:minmax(18rem,26rem) minmax(0,1fr);align-items:start}
+  #oexplore:has(#odetail.hide){grid-template-columns:minmax(0,44rem)}
+  #oexplore>.card:first-child .ores{max-height:calc(100dvh - 17rem)}
+  #odetail{position:sticky;top:var(--pad)}
+  #obboard{width:min(100%,calc(100dvh - 22rem));min-width:15rem}
+  #otrain>.card{max-width:100%}
+  #thome{max-width:46rem}
+  #ebots{grid-template-columns:repeat(auto-fill,minmax(19rem,1fr))}
+  #enginePanel{max-width:60rem}
+}
+
+/* wide rail: icons + labels */
+@media (min-width:80rem){
+  :root{--rail:13rem;--reserve:11.2rem}
+  .rail{padding:1rem .8rem 1rem calc(.8rem + env(safe-area-inset-left))}
+  .brand{justify-content:flex-start;padding:.2rem .3rem .6rem}
+  .brand h1{display:block;font-size:1.2rem}
+  .tabs{gap:.25rem}
+  .tabs button,.railbtn,.settings summary{flex-direction:row;justify-content:flex-start;gap:.85rem;font-size:1rem;padding:.7rem .85rem}
+  .tabs button svg,.railbtn svg,.settings summary svg{width:1.6rem;height:1.6rem}
+  .tabs button.on::before{top:20%;bottom:20%}
+  .railbtn,.settings summary{color:var(--muted)}
+  .sbody{bottom:.9rem}
+}
+
+/* short windows: give the board everything */
+@media (max-height:44rem) and (min-width:56rem),(orientation:landscape) and (max-height:34rem){
+  :root{--reserve:7.6rem;--preserve:6.4rem}
+  body[data-tab="play"] .pl{min-height:2.1rem}
+  .pl .sw{width:1.8rem;height:1.8rem;font-size:1.2rem}
+  .rev .boardgrid{--B:max(15rem,min(calc(100vw - var(--rail) - var(--sidemin) - 2*var(--pad) - 1.2rem - 1.9rem - 1rem),calc(100dvh - 6rem)))}
+}
+@media (orientation:landscape) and (max-height:34rem){
+  :root{--pad:.6rem;--sidemin:15rem;--reserve:7.9rem;--preserve:4.9rem;--rail:3.6rem}
+  body[data-tab="play"] .pl{min-height:1.7rem}
+  .pl .sw{width:1.5rem;height:1.5rem;font-size:1rem}
+  body[data-tab="play"] .nav button{padding:.45rem .4rem;font-size:.9rem}
+  .rail{padding-top:.5rem;padding-bottom:.5rem;gap:.35rem}
+  .tabs{gap:.1rem}
+  .tabs button,.railbtn,.settings summary{padding:.55rem .1rem}
+  .tabs button span,.railbtn span,.settings summary span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  .brand{padding:0}
+  .logo{width:1.6rem;height:1.6rem}
+}
 </style>
 </head>
 <body data-tab="play">
-<div class="wrap">
-  <div class="top">
-    <h1>Chess Analysis</h1>
-    <div class="tabs">
-      <button id="tabPlay" class="on">Play</button>
-      <button id="tabLearn">Learn</button>
-      <button id="tabReview">Review</button>
-      <button id="tabOpen">Openings</button>
-      <button id="tabEngine">Engine</button>
+<div class="app">
+
+  <aside class="rail">
+    <div class="brand">
+      <svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#739552"/><path fill="#ebecd0" d="M5 5h11v11H5zM16 16h11v11H16z"/></svg>
+      <h1>Chess Analysis</h1>
     </div>
-    <button id="fsbtn" class="ghost fsbtn" type="button" aria-pressed="false" title="Toggle full screen">&#x26F6; Full screen</button>
-  </div>
-  <details class="card settings">
-    <summary>Settings</summary>
-    <div class="row">
-      <select id="boardsel" aria-label="Board style"></select>
-      <select id="piecesel" aria-label="Piece set"></select>
-      <label class="pn">Predictions <input type="number" id="predsel" min="0" step="1" value="10" inputmode="numeric" aria-label="Number of predictions after a bad move"></label>
-      <label class="pn">Strictness
-        <select id="strict" aria-label="Engine strictness">
-          <option value="low" selected>Low</option>
-          <option value="medium">Medium</option>
-          <option value="high">High</option>
-        </select>
-      </label>
-      <button id="psound">Sound: on</button>
-      <button id="optmode" type="button">Optimisation: off</button>
+
+    <nav class="tabs" aria-label="Sections">
+      <button id="tabPlay" class="on" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="6.6" r="3.4"/><path d="M9.2 11h5.6l-.9 4h2.6l1.5 4.6H6.9l1.5-4.6H11z"/><rect x="5.5" y="20" width="13" height="2" rx="1"/></svg><span>Play</span></button>
+      <button id="tabLearn" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5 1.5 9 12 14.5 22.5 9z"/><path d="M5.5 12.8v4c0 1.5 2.9 3.2 6.5 3.2s6.5-1.7 6.5-3.2v-4L12 16.2z"/><path d="M21 10v6h1.6v-6z"/></svg><span>Learn</span></button>
+      <button id="tabReview" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" d="M10.5 3a7.5 7.5 0 0 1 5.9 12.1l4.3 4.3-1.4 1.4-4.3-4.3A7.5 7.5 0 1 1 10.5 3zm0 2a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11z"/><path d="M7.3 13v-2.4h1.6V13zm2.7 0V8h1.6v5zm2.7 0V9.6h1.6V13z"/></svg><span>Review</span></button>
+      <button id="tabOpen" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h14.5a.5.5 0 0 1 .5.5V17H6.6A1.6 1.6 0 0 0 5 18.6zM5 20.4c0-.9.7-1.4 1.6-1.4H20v2H6.6c-.9 0-1.6-.2-1.6-.6z"/></svg><span>Openings</span></button>
+      <button id="tabEngine" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" d="M9 2h1.8v3h2.4V2H15v3h.5A2.5 2.5 0 0 1 18 7.5V8h3v1.8h-3v2.4h3V14h-3v.5a2.5 2.5 0 0 1-2.5 2.5H15v3h-1.8v-3h-2.4v3H9v-3h-.5A2.5 2.5 0 0 1 6 14.5V14H3v-1.8h3V9.8H3V8h3v-.5A2.5 2.5 0 0 1 8.5 5H9zM9 8.5h6v6H9z"/></svg><span>Engine</span></button>
+    </nav>
+
+    <div class="railfoot">
+      <details class="settings" id="settings">
+        <summary aria-label="Settings"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.48.48 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.48.48 0 0 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2z"/></svg><span>Settings</span></summary>
+        <div class="sbody">
+          <h2>Settings</h2>
+          <label class="field"><span>Board</span><select id="boardsel" aria-label="Board style"></select></label>
+          <label class="field"><span>Pieces</span><select id="piecesel" aria-label="Piece set"></select></label>
+          <label class="field"><span>Predictions after a bad move</span><input type="number" id="predsel" min="0" step="1" value="10" inputmode="numeric" aria-label="Number of predictions after a bad move"></label>
+          <label class="field"><span>Engine strictness</span>
+            <select id="strict" aria-label="Engine strictness">
+              <option value="low" selected>Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+            </select>
+          </label>
+          <button id="psound" type="button">Sound: on</button>
+          <button id="optmode" type="button">Optimisation: off</button>
+        </div>
+      </details>
+      <button id="fsbtn" class="railbtn" type="button" aria-pressed="false" title="Toggle full screen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h6v2H6v4H4zm10 0h6v6h-2V6h-4zM4 14h2v4h4v2H4zm14 0h2v6h-6v-2h4z"/></svg><span>Full screen</span></button>
     </div>
-  </details>
+  </aside>
+
+  <main class="wrap">
 
   <!-- ================= PLAY ================= -->
   <div id="playPanel" class="lay play">
@@ -418,12 +565,6 @@ body.cssfs .top{justify-content:flex-end}
         <div class="pl" id="pbot"><span class="sw w"></span>You</div>
       </div>
       <div class="open hide" id="popen"></div>
-      <div class="legend">
-        <span><b style="background:var(--arG)"></b>Engine's choice</span>
-        <span><b style="background:var(--arR)"></b>Your move</span>
-        <span><b style="background:var(--blue)"></b>Engine's plan</span>
-        <span><b style="background:var(--arO)"></b>Your arrows</span>
-      </div>
       <div class="nav">
         <button id="ptake" class="hide">Take back</button>
         <button id="pcont" class="primary hide">Continue</button>
@@ -435,19 +576,24 @@ body.cssfs .top{justify-content:flex-end}
 
     <div class="side" id="pside">
       <div class="card c-setup">
-        <div class="row">
-          <select id="pcolor" aria-label="Your color">
-            <option value="w">White</option>
-            <option value="b">Black</option>
-          </select>
-          <select id="plevel" aria-label="Engine strength">
-            <option value="beginner">Beginner</option>
-            <option value="casual" selected>Casual</option>
-            <option value="strong">Strong</option>
-            <option value="max">Full strength</option>
-          </select>
-          <button class="primary" id="pnew" disabled>New game</button>
+        <h2 class="ptitle">Play Stockfish</h2>
+        <div class="cols">
+          <label class="field"><span>You play</span>
+            <select id="pcolor" aria-label="Your color">
+              <option value="w">White</option>
+              <option value="b">Black</option>
+            </select>
+          </label>
+          <label class="field"><span>Opponent</span>
+            <select id="plevel" aria-label="Engine strength">
+              <option value="beginner">Beginner</option>
+              <option value="casual" selected>Casual</option>
+              <option value="strong">Strong</option>
+              <option value="max">Full strength</option>
+            </select>
+          </label>
         </div>
+        <button class="primary" id="pnew" disabled>New game</button>
         <div class="row">
           <button id="phint" disabled>Hint</button>
           <button id="presign" disabled>Resign</button>
@@ -464,6 +610,16 @@ body.cssfs .top{justify-content:flex-end}
       <div class="card c-tally">
         <h2>Flaws this game</h2>
         <div id="ptally" class="tally"></div>
+      </div>
+
+      <div class="card c-legend">
+        <h2>Arrow colors</h2>
+        <div class="legend">
+          <span><b style="background:var(--arG)"></b>Engine's choice</span>
+          <span><b style="background:var(--arR)"></b>Your move</span>
+          <span><b style="background:var(--blue)"></b>Engine's plan</span>
+          <span><b style="background:var(--arO)"></b>Your arrows</span>
+        </div>
       </div>
     </div>
   </div>
@@ -487,28 +643,36 @@ body.cssfs .top{justify-content:flex-end}
       <div id="llist"></div>
     </div>
     <div class="card hide" id="lpuz">
-      <div class="row"><button id="lback">&larr; Lessons</button><b id="ltitle"></b></div>
-      <div class="lmeta" id="lmeta"></div>
-      <div class="lwrap" id="lwrap"><svg id="lboard" class="bd" viewBox="0 0 800 800" role="img" aria-label="Puzzle board"></svg></div>
-      <div class="lprog" id="lprog"><i id="lprogfill"></i></div>
-      <div class="status" id="lstatus">Loading Stockfish…</div>
-      <div class="row">
-        <button id="lhint">Hint</button>
-        <button id="lsol">Solution</button>
-        <button id="lretry">Retry</button>
+      <div class="phead"><button id="lback">&larr; Lessons</button><b id="ltitle"></b></div>
+      <div class="pz">
+        <div class="pz-board">
+          <div class="lwrap" id="lwrap"><svg id="lboard" class="bd" viewBox="0 0 800 800" role="img" aria-label="Puzzle board"></svg></div>
+          <div class="lprog" id="lprog"><i id="lprogfill"></i></div>
+        </div>
+        <div class="pz-side">
+          <div class="lmeta" id="lmeta"></div>
+          <div class="status" id="lstatus">Loading Stockfish…</div>
+          <div class="row">
+            <button id="lhint">Hint</button>
+            <button id="lsol">Solution</button>
+            <button id="lretry">Retry</button>
+          </div>
+          <div class="row">
+            <input id="lseed" class="lseed" type="number" inputmode="numeric" min="0" aria-label="Seed" placeholder="Seed">
+            <select id="llevel" class="lsel" aria-label="Difficulty for the next puzzle">
+              <option value="any">Any difficulty</option>
+              <option value="easy">Easy: stands out</option>
+              <option value="medium">Medium: takes a look</option>
+              <option value="hard">Hard: needs digging</option>
+            </select>
+          </div>
+          <div class="row">
+            <button id="lgo">Use seed</button>
+            <button id="lnew" class="primary">New puzzle</button>
+          </div>
+          <div class="tip">The seed and difficulty decide which game Stockfish plays. The same pair usually builds the same puzzle. Difficulty applies to the next puzzle.</div>
+        </div>
       </div>
-      <div class="row">
-        <input id="lseed" class="lseed" type="number" inputmode="numeric" min="0" aria-label="Seed" placeholder="Seed">
-        <select id="llevel" class="lsel" aria-label="Difficulty for the next puzzle">
-          <option value="any">Any difficulty</option>
-          <option value="easy">Easy: stands out</option>
-          <option value="medium">Medium: takes a look</option>
-          <option value="hard">Hard: needs digging</option>
-        </select>
-        <button id="lgo">Use seed</button>
-        <button id="lnew" class="primary">New puzzle</button>
-      </div>
-      <div class="tip">The seed and difficulty decide which game Stockfish plays. The same pair usually builds the same puzzle. Difficulty applies to the next puzzle.</div>
     </div>
   </div>
 
@@ -519,54 +683,54 @@ body.cssfs .top{justify-content:flex-end}
       <button id="omTrain" type="button" aria-pressed="false">Practice</button>
     </div>
     <div id="oexplore">
-    <div class="card">
-      <h2>Openings explorer</h2>
-      <div class="ofilters">
-        <input id="oq" type="search" placeholder="Search: Sicilian, Najdorf, gambit, C50…" autocomplete="off" spellcheck="false" aria-label="Search openings">
-        <select id="okind" aria-label="Type of opening">
-          <option value="all">All types</option>
-          <option value="gambit">Gambits</option>
-          <option value="reply">Replies to gambits</option>
-          <option value="defence">Defences</option>
-          <option value="system">Systems and attacks</option>
-          <option value="opening">Other openings</option>
-        </select>
-        <select id="oside" aria-label="Side">
-          <option value="any">Either side</option>
-          <option value="White">White's choice</option>
-          <option value="Black">Black's choice</option>
-        </select>
-        <select id="ofirst" aria-label="First move">
-          <option value="any">Any first move</option>
-          <option value="e4">1. e4</option>
-          <option value="d4">1. d4</option>
-          <option value="c4">1. c4</option>
-          <option value="Nf3">1. Nf3</option>
-          <option value="other">Other first moves</option>
-        </select>
+      <div class="card">
+        <h2>Openings explorer</h2>
+        <div class="ofilters">
+          <input id="oq" type="search" placeholder="Search: Sicilian, Najdorf, gambit, C50…" autocomplete="off" spellcheck="false" aria-label="Search openings">
+          <select id="okind" aria-label="Type of opening">
+            <option value="all">All types</option>
+            <option value="gambit">Gambits</option>
+            <option value="reply">Replies to gambits</option>
+            <option value="defence">Defences</option>
+            <option value="system">Systems and attacks</option>
+            <option value="opening">Other openings</option>
+          </select>
+          <select id="oside" aria-label="Side">
+            <option value="any">Either side</option>
+            <option value="White">White's choice</option>
+            <option value="Black">Black's choice</option>
+          </select>
+          <select id="ofirst" aria-label="First move">
+            <option value="any">Any first move</option>
+            <option value="e4">1. e4</option>
+            <option value="d4">1. d4</option>
+            <option value="c4">1. c4</option>
+            <option value="Nf3">1. Nf3</option>
+            <option value="other">Other first moves</option>
+          </select>
+        </div>
+        <div class="status" id="ocount"></div>
+        <div class="ores" id="olist"></div>
       </div>
-      <div class="status" id="ocount"></div>
-      <div class="ores" id="olist"></div>
-    </div>
-    <div class="card hide" id="odetail">
-      <svg id="obboard" class="bd" viewBox="0 0 800 800" role="img" aria-label="Opening position"></svg>
-      <div class="row">
-        <button id="ostart" aria-label="First position">⏮</button>
-        <button id="oprev" aria-label="Previous move">◀</button>
-        <button id="onext" aria-label="Next move">▶</button>
-        <button id="oend" aria-label="Last position">⏭</button>
+      <div class="card hide" id="odetail">
+        <svg id="obboard" class="bd" viewBox="0 0 800 800" role="img" aria-label="Opening position"></svg>
+        <div class="row">
+          <button id="ostart" aria-label="First position">⏮</button>
+          <button id="oprev" aria-label="Previous move">◀</button>
+          <button id="onext" aria-label="Next move">▶</button>
+          <button id="oend" aria-label="Last position">⏭</button>
+        </div>
+        <div class="olines" id="olines"></div>
+        <div class="row">
+          <select id="orepcolor" aria-label="Which side you play">
+            <option value="w">I play White</option>
+            <option value="b">I play Black</option>
+          </select>
+          <button id="orepadd" class="primary" type="button">Add to repertoire</button>
+        </div>
+        <div class="tip" id="orepnote" aria-live="polite"></div>
+        <div class="open" id="otext"></div>
       </div>
-      <div class="olines" id="olines"></div>
-      <div class="row">
-        <select id="orepcolor" aria-label="Which side you play">
-          <option value="w">I play White</option>
-          <option value="b">I play Black</option>
-        </select>
-        <button id="orepadd" class="primary" type="button">Add to repertoire</button>
-      </div>
-      <div class="tip" id="orepnote" aria-live="polite"></div>
-      <div class="open" id="otext"></div>
-    </div>
     </div>
 
     <div id="otrain" class="hide">
@@ -580,21 +744,27 @@ body.cssfs .top{justify-content:flex-end}
         </div>
         <div class="tip" id="thint0"></div>
         <div id="tstarters" class="tstart"></div>
-        <div id="treplist" style="margin-top:.6667rem"></div>
+        <div id="treplist" style="margin-top:.7rem"></div>
       </div>
       <div class="card hide" id="tdrill">
-        <div class="row"><button id="tback" type="button">&larr; Repertoire</button><b id="ttitle"></b></div>
-        <div class="lmeta" id="tmeta"></div>
-        <div class="lwrap"><svg id="tboard" class="bd" viewBox="0 0 800 800" role="img" aria-label="Practice board"></svg></div>
-        <div class="lprog" id="tprog"><i id="tprogfill"></i></div>
-        <div class="status" id="tstatus" aria-live="polite"></div>
-        <div class="row">
-          <button id="thint" type="button">Hint</button>
-          <button id="tshow" type="button">Show move</button>
-          <button id="tretry" class="hide" type="button">Replay line</button>
-          <button id="tnext" class="primary hide" type="button">Next line</button>
+        <div class="phead"><button id="tback" type="button">&larr; Repertoire</button><b id="ttitle"></b></div>
+        <div class="pz">
+          <div class="pz-board">
+            <div class="lwrap"><svg id="tboard" class="bd" viewBox="0 0 800 800" role="img" aria-label="Practice board"></svg></div>
+            <div class="lprog" id="tprog"><i id="tprogfill"></i></div>
+          </div>
+          <div class="pz-side">
+            <div class="lmeta" id="tmeta"></div>
+            <div class="status" id="tstatus" aria-live="polite"></div>
+            <div class="row">
+              <button id="thint" type="button">Hint</button>
+              <button id="tshow" type="button">Show move</button>
+              <button id="tretry" class="hide" type="button">Replay line</button>
+              <button id="tnext" class="primary hide" type="button">Next line</button>
+            </div>
+            <div class="open hide" id="tinfo"></div>
+          </div>
         </div>
-        <div class="open hide" id="tinfo"></div>
       </div>
     </div>
   </div>
@@ -603,7 +773,7 @@ body.cssfs .top{justify-content:flex-end}
   <div id="enginePanel" class="hide">
     <div class="card">
       <h2>Engine bot</h2>
-      <div class="status" id="esstatus">Loading Stockfish…</div>
+      <div class="status" id="esstatus" style="margin-top:0">Loading Stockfish…</div>
       <div class="bar" id="eprog"><i id="eprogfill"></i></div>
       <div class="ptxt" id="eprogtxt"></div>
       <div id="ebots" class="bots"></div>
@@ -645,7 +815,7 @@ body.cssfs .top{justify-content:flex-end}
           <div id="gamelist" class="gamelist" aria-label="Games"></div>
           <div id="gamecount" class="gamecount" aria-live="polite"></div>
         </div>
-        <button class="primary" id="go" style="width:100%;margin-top:.55rem">Analyze game</button>
+        <button class="primary" id="go">Analyze game</button>
         <div class="bar" id="bar"><i id="barfill"></i></div>
       </div>
       <div class="status" id="status">Loading Stockfish…</div>
@@ -672,30 +842,34 @@ body.cssfs .top{justify-content:flex-end}
         <div class="facts" id="rfacts"></div>
       </div>
 
-      <div class="card c-sum">
-        <div id="rsum"></div>
-        <button id="copyreport" class="ghost" style="width:100%;margin-top:.67rem">Copy details for ChatGPT</button>
-      </div>
+      <div class="side">
+        <div class="card c-sum">
+          <div id="rsum"></div>
+          <button id="copyreport" class="ghost">Copy details for ChatGPT</button>
+        </div>
 
-      <div class="card c-explain" id="explain"></div>
+        <div class="card c-explain" id="explain"></div>
 
-      <div class="card c-graph">
-        <h2>Evaluation</h2>
-        <svg id="graph" viewBox="0 0 600 130"></svg>
-      </div>
+        <div class="card c-graph">
+          <h2>Evaluation</h2>
+          <svg id="graph" viewBox="0 0 600 130"></svg>
+        </div>
 
-      <div class="card c-moves">
-        <h2>Moves</h2>
-        <div id="openlist" class="hide"></div>
-        <div id="moves"></div>
-      </div>
+        <div class="card c-moves">
+          <h2>Moves</h2>
+          <div id="openlist" class="hide"></div>
+          <div id="moves"></div>
+        </div>
 
-      <div class="card c-tally">
-        <h2>Your recurring flaws</h2>
-        <div id="tally" class="tally"></div>
+        <div class="card c-tally">
+          <h2>Your recurring flaws</h2>
+          <div id="tally" class="tally"></div>
+        </div>
       </div>
     </div>
   </div>
+
+  </main>
 </div>
 
 <script src="assets/js/chess.min.js"></script>
@@ -4081,7 +4255,9 @@ const fsBtn = $("fsbtn");
 const fsEl = () => document.fullscreenElement || document.webkitFullscreenElement;
 function fsPaint(){
   const on = !!fsEl() || document.body.classList.contains("cssfs");
-  fsBtn.textContent = on ? "\u2715 Exit full screen" : "\u26F6 Full screen";
+  fsBtn.innerHTML = on
+    ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4h2v6H4V8h4zm6 0h2v4h4v2h-6zM4 14h6v6H8v-4H4zm10 0h6v2h-4v4h-2z"/></svg><span>Exit full screen</span>'
+    : '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h6v2H6v4H4zm10 0h6v6h-2V6h-4zM4 14h2v4h4v2H4zm14 0h2v6h-6v-2h4z"/></svg><span>Full screen</span>';
   fsBtn.setAttribute("aria-pressed", on ? "true" : "false");
 }
 async function fsToggle(){
@@ -4123,6 +4299,16 @@ const bootEngine = () => { if(engineBooted) return; engineBooted = true; startEn
 if(document.readyState === "complete") bootEngine();
 else { addEventListener("load", bootEngine, {once:true}); setTimeout(bootEngine, 3000); }
 idle(loadOpenings);
+</script>
+<script>
+/* settings popover: close on outside tap, Escape, or when switching tabs */
+(function(){
+  const d = document.getElementById("settings");
+  if(!d) return;
+  document.addEventListener("pointerdown", e => { if(d.open && !d.contains(e.target)) d.open = false; });
+  document.addEventListener("keydown", e => { if(e.key === "Escape" && d.open){ d.open = false; d.querySelector("summary").focus(); } });
+  document.querySelector(".tabs").addEventListener("click", () => { d.open = false; });
+})();
 </script>
 </body>
 </html>
