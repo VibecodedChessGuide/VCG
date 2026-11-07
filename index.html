@@ -2121,6 +2121,7 @@ function attachMarks(svg, getFlip, redraw){
 let pg = null, humanColor = "w", pFlip = false, selSq = null, lastMove = null;
 let analysisBefore = null, thinking = false, awaiting = null, over = false, gameId = 0;
 let fb = null, hint = null, ptags = [], optMode = false;
+const OPT_DELAY_MS = 900; // Optimisation mode throttles the engine's move pace
 let hideSq = null, hoverSq = null, pendingAnim = null, spec = null;
 
 function setP(t){ $("pstatus").textContent = t; }
@@ -2199,6 +2200,8 @@ async function engineMove(id){
     if(id!==gameId || over) return;
     if(engineReady) u = await enqueue(() => engineSearch(fen, L.skill, L.depth));
   }
+  if(id!==gameId || over) return;
+  if(optMode) await new Promise(r => setTimeout(r, OPT_DELAY_MS));
   if(id!==gameId || over) return;
   let m = uciToMove(pg, u);
   if(!m){ const legal = pg.moves({verbose:true}); if(legal.length) m = pg.move(legal[Math.floor(Math.random()*legal.length)]); }
