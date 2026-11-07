@@ -6,60 +6,63 @@
   FILE MAP — index.html (single-file app; jump straight to the ranges you need)
   Line numbers are absolute in this file. Read only the section you need.
   -------------------------------------------------------------------------
-  HEAD / META / CSS ............................................ 1-673
-    theme tokens + light mode .................................. 74-120
-    base controls + buttons .................................... 121-161
-    app shell: rail, tabs, settings ............................ 162-198
-    page wrapper + sizing ...................................... 199-201
-    board, eval bar, players ................................... 202-242
-    Play tab styles ............................................ 243-283
-    Review tab styles .......................................... 284-344
-    Learn / Openings / Engine styles ........................... 345-404
-    touch target sizes ......................................... 405-409
-    mobile layout (pinned Play board) .......................... 410-447
-    desktop rail layout ........................................ 448-581
-    Friends tab styles (player rows, clocks, actions) .......... 582-672
-  BODY MARKUP .................................................. 675-1069
-    rail: tabs, settings, fullscreen ........................... 678-717
-    Play tab ................................................... 718-786
-    Friends tab (player rows, board, facing switch) ............ 787-812
-    Learn tab .................................................. 813-864
-    Openings tab (explorer + trainer) .......................... 865-957
-    Engine tab ................................................. 958-969
-    Review tab ................................................. 970-1069
-  JAVASCRIPT (inline) .......................................... 1071-5022
-    config: engine paths, bots, boards, levels ................. 1072-1146
-    sound effects .............................................. 1147-1202
-    engine worker pool + search ................................ 1203-1442
-    general helpers ............................................ 1443-1476
-    tactics: forks, pins, hanging pieces ....................... 1477-1548
-    openings dataset + explorer ................................ 1549-1842
-    background chess.js worker ................................. 1843-1885
-    move judging / classifications ............................. 1886-2079
-    predictions after bad moves ................................ 2080-2259
-    board drawing (SVG) ........................................ 2260-2437
-    square helpers + right-click marks ......................... 2438-2488
-    Play mode: hints, engine moves ............................. 2489-2835
-      pointer input (tap / drag) ............................... 2678-2835
-    Friends mode (same device, no engine) ...................... 2836-3104
-      piece-facing switch (fRot, fFace, fRotPaint) ............. 2842-2868, 3091-3096
-    Review mode ................................................ 3105-3897
-      chess.com link loader + compressed share links ........... 3705-3897
-    board + piece set selection ................................ 3898-3920
-    Learn: seeded engine puzzles ............................... 3921-4583
-      theme tests (mate, tactics, endgames) .................... 3964-4029
-      seeded start positions ................................... 4030-4075
-      side cooperation for puzzle building ..................... 4076-4115
-      puzzle difficulty rating ................................. 4116-4210
-      puzzle UI state .......................................... 4211-4443
-      puzzle move checking ..................................... 4444-4527
-      puzzle board input ....................................... 4528-4583
-    opening trainer (repertoire drills) ........................ 4584-4906
-      trainer starter lines .................................... 4649-4663
-      trainer home screen ...................................... 4664-4724
-      trainer drill ............................................ 4725-4906
-    tab switching + boot ....................................... 4907-5022
-  SETTINGS POPOVER SCRIPT ...................................... 5023-5032
+  HEAD / META / CSS ............................................ 1-721
+    theme tokens + light mode .................................. 77-123
+    base controls + buttons .................................... 124-164
+    app shell: rail, tabs, settings ............................ 165-201
+    page wrapper + sizing ...................................... 202-204
+    board, eval bar, players ................................... 205-245
+    Play tab styles ............................................ 246-286
+    Review tab styles .......................................... 287-347
+    Learn / Openings / Engine styles ........................... 348-407
+    Detector tab styles ........................................ 408-452
+    touch target sizes ......................................... 453-457
+    mobile layout (pinned Play board) .......................... 458-495
+    desktop rail layout ........................................ 496-629
+    Friends tab styles (player rows, clocks, actions) .......... 630-720
+  BODY MARKUP .................................................. 723-1156
+    rail: tabs, settings, fullscreen ........................... 726-766
+    Play tab ................................................... 767-835
+    Friends tab (player rows, board, facing switch) ............ 836-861
+    Learn tab .................................................. 862-913
+    Openings tab (explorer + trainer) .......................... 914-1006
+    Engine tab ................................................. 1007-1018
+    Detector tab (input, results) .............................. 1019-1056
+    Review tab ................................................. 1057-1156
+  JAVASCRIPT (inline) .......................................... 1158-5484
+    config: engine paths, bots, boards, levels ................. 1159-1233
+    sound effects .............................................. 1234-1289
+    engine worker pool + search ................................ 1290-1531
+    general helpers ............................................ 1532-1565
+    tactics: forks, pins, hanging pieces ....................... 1566-1637
+    openings dataset + explorer ................................ 1638-1931
+    background chess.js worker ................................. 1932-1974
+    move judging / classifications ............................. 1975-2168
+    predictions after bad moves ................................ 2169-2348
+    board drawing (SVG) ........................................ 2349-2526
+    square helpers + right-click marks ......................... 2527-2577
+    Play mode: hints, engine moves ............................. 2578-2924
+      pointer input (tap / drag) ............................... 2767-2924
+    Friends mode (same device, no engine) ...................... 2925-3193
+      piece-facing switch (fRot, fFace, fRotPaint) ............. 2931-2957, 3180-3185
+    Review mode ................................................ 3194-3986
+      chess.com link loader + compressed share links ........... 3794-3986
+    board + piece set selection ................................ 3987-4009
+    Learn: seeded engine puzzles ............................... 4010-4672
+      theme tests (mate, tactics, endgames) .................... 4053-4118
+      seeded start positions ................................... 4119-4164
+      side cooperation for puzzle building ..................... 4165-4204
+      puzzle difficulty rating ................................. 4205-4299
+      puzzle UI state .......................................... 4300-4532
+      puzzle move checking ..................................... 4533-4616
+      puzzle board input ....................................... 4617-4672
+    opening trainer (repertoire drills) ........................ 4673-4995
+      trainer starter lines .................................... 4738-4752
+      trainer home screen ...................................... 4753-4813
+      trainer drill ............................................ 4814-4995
+    DETECTOR: engine match + sudden-jump flags ................. 4996-5364
+    tab switching + boot ....................................... 5365-5484
+  SETTINGS POPOVER SCRIPT ...................................... 5485-5494
   -------------------------------------------------------------------------
   Keep this map updated after edits (regenerate line numbers).
 -->
@@ -168,7 +171,7 @@ textarea{display:block;width:100%;height:7rem;padding:.75rem;resize:vertical;fon
 .railfoot{margin-left:auto;display:flex;align-items:center;gap:.15rem}
 
 .tabs{position:fixed;z-index:40;left:0;right:0;bottom:0;height:calc(var(--tabH) + var(--sab));padding:0 env(safe-area-inset-right) var(--sab) env(safe-area-inset-left);
-  display:grid;grid-template-columns:repeat(6,1fr);background:var(--panel);box-shadow:0 -1px 0 rgba(0,0,0,.28)}
+  display:grid;grid-template-columns:repeat(7,1fr);background:var(--panel);box-shadow:0 -1px 0 rgba(0,0,0,.28)}
 .tabs button,.railbtn,.settings summary{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.18rem;
   background:none;border:0;border-radius:0;color:var(--muted);font:700 .68rem/1.1 inherit;font-family:inherit;padding:.4rem 0;position:relative;cursor:pointer;
   list-style:none;transition:color .12s,background .12s}
@@ -401,6 +404,51 @@ body.cssfs .tabs+*{}
 .rrow .due{color:var(--warn);font-weight:700}
 .rrow .new{color:var(--blue);font-weight:700}
 #phints{margin-top:.5rem}
+
+/* ---------- ENGINE DETECTOR ---------- */
+#detectPanel{max-width:56rem;margin-inline:auto;display:grid;gap:var(--gap);align-content:start}
+#detectPanel .rin{margin-bottom:0}
+#dgo{width:100%;margin-top:.7rem;padding:.8rem 1rem;font-size:1.05rem;font-weight:800}
+.dwide{grid-column:1/-1}
+.dsum{display:grid;gap:.6rem}
+.dsum h2{margin:0}
+.dnote{font-size:.8rem;color:var(--muted);line-height:1.45}
+.dcard{display:grid;gap:.7rem;border-left:5px solid var(--good)}
+.dcard.inv{border-left-color:var(--bad)}
+.dcard.jump{border-left-color:var(--warn)}
+.dcard.low{border-left-color:var(--line)}
+.dhead{display:flex;align-items:flex-start;justify-content:space-between;gap:.6rem}
+.dhead b{display:block;font-size:1rem;font-weight:800;overflow:hidden;text-overflow:ellipsis}
+.dhead small{display:block;color:var(--muted);font-size:.8rem;font-weight:600;margin-top:.1rem}
+.dflags{display:flex;flex-wrap:wrap;gap:.35rem;justify-content:flex-end;flex:none;max-width:60%}
+.dflag{font-size:.74rem;font-weight:800;padding:.2rem .55rem;border-radius:2rem;color:#fff;white-space:nowrap}
+.dflag.inv{background:var(--bad)}
+.dflag.jump{background:var(--warn);color:#241505}
+.dflag.ok{background:var(--goodb)}
+.dflag.low{background:var(--raise);color:var(--muted)}
+.dstats{display:grid;grid-template-columns:repeat(auto-fit,minmax(6.5rem,1fr));gap:.5rem}
+.dstat{background:var(--deep);border-radius:.6rem;padding:.55rem .6rem;text-align:center}
+.dstat strong{display:block;font:800 1.35rem/1.1 "Segoe UI",system-ui,sans-serif}
+.dstat small{display:block;color:var(--muted);font-size:.74rem;font-weight:600;margin-top:.2rem}
+.dstat.inv strong{color:var(--bad)}
+.dstat.ok strong{color:var(--good)}
+.dchart{width:100%;height:auto;display:block;background:var(--deep);border-radius:.5rem}
+.dwhy{font-size:.86rem;line-height:1.45;padding:.5rem .7rem;border-radius:.5rem;background:rgba(250,65,45,.1);border-left:4px solid var(--bad)}
+.dwhy.jump{background:rgba(247,165,49,.12);border-left-color:var(--warn)}
+.dwhy p+p{margin-top:.3rem}
+
+.dmoves{display:flex;flex-wrap:wrap;gap:.25rem}
+.dm{font-size:.78rem;font-weight:700;padding:.15rem .4rem;border-radius:.35rem;background:var(--deep);color:var(--muted);border:1px solid var(--line)}
+.dm.t1{background:rgba(129,182,76,.22);color:var(--ink);border-color:var(--goodb)}
+.dm.t3{background:rgba(106,166,230,.2);color:var(--ink);border-color:var(--blue)}
+.dm.sk{opacity:.5;border-style:dashed}
+.dm.bad{box-shadow:inset 0 -3px 0 var(--bad)}
+.dlegend{display:flex;flex-wrap:wrap;gap:.3rem .9rem;font-size:.74rem;color:var(--muted)}
+.dlegend i{display:inline-block;width:.7rem;height:.7rem;border-radius:.2rem;margin-right:.3rem;vertical-align:-1px;border:1px solid var(--line);background:var(--deep)}
+.dlegend i.t1{background:rgba(129,182,76,.5);border-color:var(--goodb)}
+.dlegend i.t3{background:rgba(106,166,230,.5);border-color:var(--blue)}
+.dlegend i.sk{border-style:dashed;opacity:.6}
+.dcard .dnote:empty{display:none}
 
 /* ---------- touch ---------- */
 @media (pointer:coarse){
@@ -688,6 +736,7 @@ body[data-tab="play"] #pnew{padding:.7rem 1rem;font-size:1.08rem}
       <button id="tabReview" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" d="M10.5 3a7.5 7.5 0 0 1 5.9 12.1l4.3 4.3-1.4 1.4-4.3-4.3A7.5 7.5 0 1 1 10.5 3zm0 2a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11z"/><path d="M7.3 13v-2.4h1.6V13zm2.7 0V8h1.6v5zm2.7 0V9.6h1.6V13z"/></svg><span>Review</span></button>
       <button id="tabOpen" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h14.5a.5.5 0 0 1 .5.5V17H6.6A1.6 1.6 0 0 0 5 18.6zM5 20.4c0-.9.7-1.4 1.6-1.4H20v2H6.6c-.9 0-1.6-.2-1.6-.6z"/></svg><span>Openings</span></button>
       <button id="tabEngine" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" d="M9 2h1.8v3h2.4V2H15v3h.5A2.5 2.5 0 0 1 18 7.5V8h3v1.8h-3v2.4h3V14h-3v.5a2.5 2.5 0 0 1-2.5 2.5H15v3h-1.8v-3h-2.4v3H9v-3h-.5A2.5 2.5 0 0 1 6 14.5V14H3v-1.8h3V9.8H3V8h3v-.5A2.5 2.5 0 0 1 8.5 5H9zM9 8.5h6v6H9z"/></svg><span>Engine</span></button>
+      <button id="tabDetect" type="button" title="Engine detector"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5zm0 2.1 6 2.3V11c0 3.9-2.5 7.4-6 8.9-3.5-1.5-6-5-6-8.9V6.4zM11 7.5h2V13h-2zm0 7h2v2h-2z"/></svg><span>Detector</span></button>
     </nav>
 
     <div class="railfoot">
@@ -967,6 +1016,44 @@ body[data-tab="play"] #pnew{padding:.7rem 1rem;font-size:1.08rem}
     </div>
   </div>
 
+  <!-- ================= ENGINE DETECTOR ================= -->
+  <div id="detectPanel" class="hide">
+    <div class="card rin" id="dinput">
+      <div class="rhead">
+        <h2>Engine detector</h2>
+        <button id="dedit" class="ghost hide" type="button">Edit</button>
+      </div>
+      <div id="dform">
+        <p class="tip" style="margin:.4rem 0 .2rem">Compares every move a player made with Stockfish's top 3. A first-choice match rate of 75% or more is marked <b>Needs investigation</b>. So are engine-like precision (top-3 match, almost no centipawn loss, no mistakes), play far above the listed rating, and a sudden jump in engine-move accuracy. Paste one game, or several games by the same player to also catch a jump between games.</p>
+        <textarea id="dpgn" placeholder="Paste a PGN here (one game, or many games by the same player)…" spellcheck="false"></textarea>
+        <div class="rctl">
+          <input id="dplayer" type="text" placeholder="Player name (optional)" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Player name">
+          <select id="dside" aria-label="Which side">
+            <option value="wb">Both sides</option>
+            <option value="w">White</option>
+            <option value="b">Black</option>
+          </select>
+        </div>
+        <div class="rctl">
+          <select id="ddepth" aria-label="Search depth">
+            <option value="8">Fast</option>
+            <option value="10" selected>Balanced</option>
+            <option value="13">Deep (slow)</option>
+          </select>
+          <button id="dfromrev" class="ghost" type="button">Use Review game</button>
+        </div>
+        <div class="rctl">
+          <button id="dimport" class="ghost dwide" type="button">Import PGN file</button>
+        </div>
+        <input type="file" id="dfile" accept=".pgn,.txt,text/plain" class="hide">
+        <button class="primary" id="dgo" type="button">Run detector</button>
+        <div class="bar" id="dbar"><i id="dbarfill"></i></div>
+      </div>
+      <div class="status" id="dstatus">Loading Stockfish…</div>
+    </div>
+    <div id="dresults" class="hide"></div>
+  </div>
+
   <!-- ================= REVIEW ================= -->
   <div id="reviewPanel" class="hide">
     <div class="card rin" id="rinput">
@@ -1235,6 +1322,7 @@ function paintProgress(p){
   $("esstatus").textContent = txt;
   $("pstatus").textContent = txt;
   $("status").textContent = txt;
+  $("dstatus").textContent = txt;
 }
 function engineProgressReset(prog){
   clearTimeout(progT); progT = 0; progP = null; dlDone = false;
@@ -1304,7 +1392,7 @@ function stopEngine(){
   if(aux){ try{ aux.w.terminate(); }catch(e){} aux.dead = true; if(aux.abort) aux.abort(); aux = null; }
   engineReady = false;
   spec = null;
-  cache.clear();
+  cache.clear(); dcache.clear();
   workerP.length = 0;
 }
 function renderBots(){
@@ -1360,6 +1448,7 @@ async function startEngine(gen){
     $("status").textContent = done + ". Paste a game, import a file, or choose a demo game.";
     $("pstatus").textContent = done + ". Pick a side and start.";
     $("pnew").disabled = false;
+    if(!$("dresults") || $("dresults").classList.contains("hide")) $("dstatus").textContent = done + ". Paste a game and tap Run detector.";
     if(BOT().size <= BIG_BUILD) bootAux(gen); // big builds wait until a game or review actually needs a helper
   }catch(e){
     if(gen !== engineGen) return;
@@ -4904,6 +4993,375 @@ tb.addEventListener("pointerup", e => { if(e.button===0) tDropEnd(e, false); });
 tb.addEventListener("pointercancel", e => tDropEnd(e, true));
 tBadge();
 
+/* ================= DETECTOR: engine-match + sudden-jump flags ================= */
+const DET = {
+  INVESTIGATE: 0.75,   // first-choice match rate at or above this needs investigation
+  MIN_MOVES: 8,        // fewer counted moves than this is too small a sample
+  WIN: 10,             // max rolling window (counted moves) for in-game jump detection
+  GAME_JUMP: 0.40,     // in-game: later window beats an earlier window by this much
+  GAME_JUMP_TO: 0.70,  // ...and the later window must be at least this accurate
+  SERIES_JUMP: 0.25,   // across games: this game beats the player's earlier average by this much
+  SERIES_TO: 0.50,     // ...and reaches at least this match rate
+  DECIDED: 700,        // positions this lopsided (centipawns for the mover) are not counted
+  OBVIOUS_GAP: 200,    // best move beats the 2nd best by this much: an only-move, not counted
+  COMPLEX_SPREAD: 60,  // best vs 3rd best within this: several good options (a telling position)
+  TOP3: 0.90,          // engine-like profile: top-3 match at least this...
+  PROFILE_ACPL: 15,    // ...with average centipawn loss at most this...
+  MIN_PROFILE: 10,     // ...over at least this many counted moves, and no mistakes
+  RATING_GAP: 600,     // plays this far above the listed Elo (from centipawn loss)
+  MPV: 3,
+  MAX_GAMES: 30
+};
+let dRunning = 0;
+const dcache = new Map();
+const pct = x => Math.round(x*100) + "%";
+// 95% Wilson interval for a rate k/n: tells how much a short game can really say
+function wilson(k, n){
+  if(!n) return [0, 0];
+  const z = 1.96, p = k/n, d = 1 + z*z/n, c = p + z*z/(2*n), w = z*Math.sqrt(p*(1-p)/n + z*z/(4*n*n));
+  return [Math.max(0, (c-w)/d), Math.min(1, (c+w)/d)];
+}
+
+// Top-N analysis of one position. Scores in .lines are from the mover's side; .cp/.mate are from White's side (like analyze()).
+// MultiPV is switched on only for this search and always reset, so Review and Play keep seeing a single line.
+function detAnalyze(fen, depth, wk, mpv){
+  mpv = mpv || DET.MPV;
+  const key = fen + "|" + depth + "|" + mpv, hit = dcache.get(key);
+  if(hit) return Promise.resolve(hit);
+  const g = new Chess(fen);
+  if(g.game_over()) return analyze(fen, depth, wk);
+  const sign = g.turn()==="w" ? 1 : -1, by = {};
+  const setMpv = v => { try{ wk.w.postMessage("setoption name MultiPV value " + v); }catch(e){} };
+  setMpv(mpv);
+  return runSearch(wk, fen, depth, 20, l => {
+    if(!l.startsWith("info") || !l.includes(" pv ") || /bound/.test(l)) return;
+    const sc = l.match(/score (cp|mate) (-?\d+)/); if(!sc) return;
+    const mp = l.match(/multipv (\d+)/), v = parseInt(sc[2], 10), pv = l.split(" pv ")[1].trim().split(/\s+/);
+    by[mp ? +mp[1] : 1] = {uci:pv[0], pv, mate: sc[1]==="mate" ? v : null, cp: sc[1]==="cp" ? v : (v>0?1:-1) * (10000 - Math.abs(v)*10)};
+  }).then(res => {
+    setMpv(1);
+    if(!res) return null;
+    const lines = Object.keys(by).map(Number).sort((x,y) => x-y).map(k => by[k]);
+    if(!lines.length && res.best && res.best!=="(none)") lines.push({uci:res.best, pv:[res.best], mate:null, cp:0});
+    if(!lines.length) return null;
+    const top = lines[0];
+    const r = {fen, cp:top.cp*sign, mate: top.mate!=null ? top.mate*sign : null, best:top.uci, pv:top.pv, lines};
+    dcache.set(key, r);
+    if(dcache.size > 800) dcache.delete(dcache.keys().next().value);
+    return r;
+  });
+}
+
+// Pick the subject(s) to score for one parsed game.
+function detSubjects(game, idx, player, side){
+  const out = [], p = player.trim().toLowerCase();
+  const add = (color, name) => out.push({color, name, game, idx, elo: parseInt(color==="w" ? game.whiteElo : game.blackElo, 10) || null});
+  if(p){
+    const w = game.white.toLowerCase().includes(p), b = game.black.toLowerCase().includes(p);
+    if(w) add("w", game.white);
+    if(b) add("b", game.black);
+    return out;
+  }
+  if(side==="w" || side==="wb") add("w", game.white);
+  if(side==="b" || side==="wb") add("b", game.black);
+  return out;
+}
+
+// rolling in-game jump: the biggest rise from an earlier window to a later, non-overlapping one
+function detJump(flags, W){
+  const n = flags.length;
+  if(n < W*2) return null;
+  const pre = [0]; flags.forEach(f => pre.push(pre[pre.length-1] + f));
+  const rate = a => (pre[a+W] - pre[a]) / W;
+  let best = null;
+  for(let a=0; a<=n-2*W; a++) for(let b=a+W; b<=n-W; b++){
+    const j = rate(b) - rate(a);
+    if(!best || j > best.jump) best = {a, b, from:rate(a), to:rate(b), jump:j, W};
+  }
+  if(best && best.jump >= DET.GAME_JUMP && best.to >= DET.GAME_JUMP_TO) return best;
+  return null;
+}
+
+// Score one side of one game from the analysed positions.
+function detScore(sub, fens, pv){
+  const list = sub.moves, entries = [];
+  list.forEach((m, i) => {
+    if(m.color !== sub.color) return;
+    const before = pv[i], after = pv[i+1];
+    if(!before || !after || !before.best) return;
+    const mover = m.color==="w" ? 1 : -1, uci = m.from + m.to + (m.promotion||"");
+    const lines = before.lines || [];
+    const match = uci === before.best;
+    const top3 = match || lines.slice(0, 3).some(l => l.uci === uci);
+    const L = k => lines[k] ? clip(lines[k].cp, 2000) : null;
+    const gap = L(1) != null ? L(0) - L(1) : null;               // best vs 2nd best (mover's view)
+    const spread = L(2) != null ? L(0) - L(2) : null;            // best vs 3rd best
+    const complex = spread != null && spread <= DET.COMPLEX_SPREAD;
+    const prev = i > 0 ? list[i-1] : null;
+    const recapture = !!(m.captured && prev && prev.captured && prev.to === m.to);
+    const obvious = recapture || (gap != null && gap >= DET.OBVIOUS_GAP);
+    let legal = 99; try{ legal = new Chess(fens[i]).moves().length; }catch(e){}
+    let book = null; try{ book = lookupFen(fens[i+1]); }catch(e){}
+    const mine = before.mate != null ? (before.mate*mover > 0 ? 1e5 : -1e5) : before.cp*mover;
+    let skip = null;
+    if(legal <= 1) skip = "forced";
+    else if(book) skip = "book";
+    else if(Math.abs(mine) >= DET.DECIDED) skip = "decided";
+    else if(obvious) skip = "obvious";
+    let loss = Math.max(0, (clip(before.cp) - clip(after.cp)) * mover);
+    if(match) loss = 0;
+    entries.push({ply:i+1, san:m.san, match, top3, complex, loss:Math.min(400, loss), skip});
+  });
+  const used = entries.filter(e => !e.skip), n = used.length;
+  const hits = used.filter(e => e.match).length, t3 = used.filter(e => e.top3).length;
+  const cx = used.filter(e => e.complex), flags = used.map(e => e.match ? 1 : 0);
+  const skips = {book:0, forced:0, decided:0, obvious:0};
+  entries.forEach(e => { if(e.skip) skips[e.skip]++; });
+  const acpl = n ? used.reduce((t,e) => t + e.loss, 0)/n : 0;
+  const W = Math.max(5, Math.min(DET.WIN, Math.floor(n/3)));
+  return {entries, used, n, hits, rate: n ? hits/n : 0, ci: wilson(hits, n), t3, t3rate: n ? t3/n : 0,
+    acpl, big: used.filter(e => e.loss >= 100).length, cx: cx.length, cxHits: cx.filter(e => e.match).length,
+    skips, skipped: entries.length - n, flags, W, jump: detJump(flags, W),
+    perfElo: n >= DET.MIN_PROFILE ? Math.round(interp(acpl, ACPL_ELO)/10)*10 : null};
+}
+
+// every flag a player-game can carry
+function detFlags(r, sub, seriesNote){
+  const tiny = r.n < DET.MIN_MOVES;
+  const inv = !tiny && r.rate >= DET.INVESTIGATE;
+  const prof = !tiny && !inv && r.n >= DET.MIN_PROFILE && r.t3rate >= DET.TOP3 && r.acpl <= DET.PROFILE_ACPL && r.big === 0;
+  const gap = (sub.elo && r.perfElo) ? r.perfElo - sub.elo : null;
+  const far = !tiny && gap != null && gap >= DET.RATING_GAP && r.n >= 12;
+  return {tiny, inv, prof, far, gap, gj: !!r.jump, sj: !!seriesNote,
+    red: inv || prof || far, any: inv || prof || far || !!r.jump || !!seriesNote};
+}
+
+function detChart(r){
+  const W = r.W, flags = r.flags, n = flags.length;
+  const w = 600, h = 130, padL = 30, padR = 8, padT = 8, padB = 18;
+  const X = i => padL + (n<=1 ? 0 : i/(n-1)) * (w-padL-padR);
+  const Y = v => padT + (1-v) * (h-padT-padB);
+  let s = "";
+  [0, .25, .5, .75, 1].forEach(v => { s += `<line x1="${padL}" x2="${w-padR}" y1="${Y(v)}" y2="${Y(v)}" stroke="#8a8784" stroke-width="1" opacity="${v===.75?0:.25}"/><text x="${padL-4}" y="${Y(v)+3}" font-size="9" text-anchor="end" fill="#a8a7a5">${v*100}</text>`; });
+  s += `<line x1="${padL}" x2="${w-padR}" y1="${Y(DET.INVESTIGATE)}" y2="${Y(DET.INVESTIGATE)}" stroke="#fa412d" stroke-width="1.5" stroke-dasharray="5 4"/><text x="${w-padR}" y="${Y(DET.INVESTIGATE)-3}" font-size="9" text-anchor="end" fill="#fa412d">75% line</text>`;
+  if(r.jump){
+    const x0 = X(r.jump.b), x1 = X(Math.min(n-1, r.jump.b + W - 1));
+    s += `<rect x="${x0}" y="${padT}" width="${Math.max(2, x1-x0)}" height="${h-padT-padB}" fill="#f7a531" opacity=".18"/>`;
+  }
+  if(n >= W){
+    const pts = [];
+    for(let i=W-1; i<n; i++){ let c = 0; for(let k=i-W+1; k<=i; k++) c += flags[k]; pts.push(`${X(i).toFixed(1)},${Y(c/W).toFixed(1)}`); }
+    s += `<polyline points="${pts.join(" ")}" fill="none" stroke="#6aa6e6" stroke-width="2.5" stroke-linejoin="round"/>`;
+  }
+  flags.forEach((f, i) => { s += `<circle cx="${X(i).toFixed(1)}" cy="${h-padB+6}" r="2.2" fill="${f ? "#81b64c" : "#6d6b69"}"/>`; });
+  return `<svg class="dchart" viewBox="0 0 ${w} ${h}" role="img" aria-label="Rolling engine match rate over ${W} moves">${s}</svg>`;
+}
+
+// one chip per move the player made: first choice, top 3, other, or not counted
+function detMoves(r){
+  const chips = r.entries.map(e => {
+    const no = Math.ceil(e.ply/2) + (e.ply%2 ? "." : "...");
+    const c = e.skip ? "sk" : e.match ? "t1" : e.top3 ? "t3" : "ms";
+    const tip = e.skip ? "Not counted: " + e.skip : e.match ? "Engine's first choice" : e.top3 ? "In the engine's top 3" : "Lost about " + Math.round(e.loss) + " centipawns";
+    return `<span class="dm ${c}${(!e.skip && e.loss >= 100) ? " bad" : ""}" title="${tip}">${no}${esc(e.san)}</span>`;
+  }).join("");
+  return `<div class="dmoves">${chips}</div>
+    <div class="dlegend"><span><i class="t1"></i>First choice</span><span><i class="t3"></i>Top 3</span><span><i class="ms"></i>Other</span><span><i class="sk"></i>Not counted</span></div>`;
+}
+
+function detCard(r, label, sub, f, seriesNote){
+  const cls = f.tiny ? "low" : f.red ? "inv" : f.any ? "jump" : "";
+  let flags = "";
+  if(f.tiny) flags += `<span class="dflag low">Too few moves</span>`;
+  if(f.inv) flags += `<span class="dflag inv">Needs investigation</span>`;
+  if(f.prof) flags += `<span class="dflag inv">Engine-like precision</span>`;
+  if(f.far) flags += `<span class="dflag inv">Plays far above rating</span>`;
+  if(f.gj) flags += `<span class="dflag jump">Sudden jump in game</span>`;
+  if(f.sj) flags += `<span class="dflag jump">Jump vs earlier games</span>`;
+  if(!f.tiny && !f.any) flags += `<span class="dflag ok">No flag</span>`;
+  const [lo, hi] = r.ci;
+  let why = "";
+  if(f.inv) why += `<p><b>${pct(r.rate)}</b> of the counted moves (${r.hits} of ${r.n}) were Stockfish's first choice, at or above the ${pct(DET.INVESTIGATE)} line (95% range ${pct(lo)}-${pct(hi)}).</p>`;
+  if(f.prof) why += `<p>Under the ${pct(DET.INVESTIGATE)} line on first choices (${pct(r.rate)}), but <b>${pct(r.t3rate)}</b> of moves were in Stockfish's top 3, the average loss was only <b>${Math.round(r.acpl)}</b> centipawns, and there was not one mistake in ${r.n} moves. That is how an engine plays.</p>`;
+  if(f.far) why += `<p>The moves play like roughly <b>${r.perfElo}</b> Elo (from centipawn loss) against a listed rating of <b>${sub.elo}</b>.</p>`;
+  if(f.gj){
+    const fa = r.used[r.jump.a].ply, fb = r.used[r.jump.b].ply;
+    why += `<p>Engine-move accuracy jumped from <b>${pct(r.jump.from)}</b> (around ply ${fa}) to <b>${pct(r.jump.to)}</b> (around ply ${fb}) over ${r.jump.W}-move windows, a rise of ${Math.round(r.jump.jump*100)} points.</p>`;
+  }
+  if(f.sj) why += `<p>${seriesNote}</p>`;
+  if(r.n > 0 && r.n < 20) why += `<p>Only ${r.n} moves were counted, so treat these numbers with care.</p>`;
+  const sk = r.skipped ? `Not counted (${r.skipped}): ${[["book",r.skips.book],["forced",r.skips.forced],["decided",r.skips.decided],["obvious",r.skips.obvious]].filter(x => x[1]).map(x => x[1] + " " + x[0]).join(", ")}.` : "";
+  const cxTxt = r.cx >= 4 ? ` In ${r.cx} positions with several good options the engine's first choice was played ${r.cxHits} time${r.cxHits===1?"":"s"}.` : "";
+  return `<div class="card dcard ${cls}">
+    <div class="dhead"><div><b>${esc(label)}</b><small>${esc(sub)}</small></div><div class="dflags">${flags}</div></div>
+    <div class="dstats">
+      <div class="dstat ${f.inv?"inv":(!f.tiny?"ok":"")}"><strong>${r.n ? pct(r.rate) : "-"}</strong><small>First-choice match</small></div>
+      <div class="dstat ${f.prof?"inv":""}"><strong>${r.n ? pct(r.t3rate) : "-"}</strong><small>Top-3 match</small></div>
+      <div class="dstat"><strong>${r.n ? Math.round(r.acpl) : "-"}</strong><small>Avg centipawn loss</small></div>
+      <div class="dstat"><strong>${r.hits}/${r.n}</strong><small>First choices / counted</small></div>
+    </div>
+    ${r.n >= 2*r.W ? detChart(r) : ""}
+    ${detMoves(r)}
+    ${why ? `<div class="dwhy ${f.red?"":"jump"}">${why}</div>` : ""}
+    <p class="dnote">${sk}${cxTxt}</p>
+  </div>`;
+}
+
+function detSeriesChart(rows){
+  const n = rows.length, w = 600, h = 140, padL = 30, padR = 10, padT = 10, padB = 20;
+  const X = i => padL + (n<=1 ? .5 : i/(n-1)) * (w-padL-padR);
+  const Y = v => padT + (1-v) * (h-padT-padB);
+  let s = "";
+  [0, .25, .5, .75, 1].forEach(v => { s += `<line x1="${padL}" x2="${w-padR}" y1="${Y(v)}" y2="${Y(v)}" stroke="#8a8784" opacity="${v===.75?0:.25}"/><text x="${padL-4}" y="${Y(v)+3}" font-size="9" text-anchor="end" fill="#a8a7a5">${v*100}</text>`; });
+  s += `<line x1="${padL}" x2="${w-padR}" y1="${Y(DET.INVESTIGATE)}" y2="${Y(DET.INVESTIGATE)}" stroke="#fa412d" stroke-width="1.5" stroke-dasharray="5 4"/>`;
+  const ok = rows.filter(r => !r.f.tiny);
+  if(ok.length > 1) s += `<polyline points="${ok.map(r => `${X(r.i).toFixed(1)},${Y(r.res.rate).toFixed(1)}`).join(" ")}" fill="none" stroke="#6aa6e6" stroke-width="2" opacity=".7"/>`;
+  rows.forEach(r => {
+    if(r.f.tiny) return;
+    s += `<circle cx="${X(r.i).toFixed(1)}" cy="${Y(r.res.rate).toFixed(1)}" r="5" fill="${r.f.red ? "#fa412d" : r.f.any ? "#f7a531" : "#81b64c"}" stroke="#262421" stroke-width="1.5"/>`;
+  });
+  s += `<text x="${padL}" y="${h-4}" font-size="9" fill="#a8a7a5">older games</text><text x="${w-padR}" y="${h-4}" font-size="9" text-anchor="end" fill="#a8a7a5">newer games</text>`;
+  return `<svg class="dchart" viewBox="0 0 ${w} ${h}" role="img" aria-label="Match rate across games">${s}</svg>`;
+}
+
+async function runDetector(){
+  const st = $("dstatus");
+  if(!engineReady){ st.textContent = "Stockfish is not ready yet."; return; }
+  const text = $("dpgn").value.trim();
+  if(!text){ st.textContent = "Paste a PGN, import a file, or use the game from Review."; return; }
+  let games = parsePgnGames(text);
+  if(!games.length){
+    const g = new Chess();
+    if(!g.load_pgn(text, {sloppy:true}) || !g.history().length){ st.textContent = "That PGN could not be read. Check the moves and try again."; return; }
+    const hd = g.header();
+    games = [{white:hd.White||"White", black:hd.Black||"Black", date:hd.Date||"", pgn:text, index:0, event:hd.Event||"", result:hd.Result||"", whiteElo:hd.WhiteElo||"", blackElo:hd.BlackElo||""}];
+  }
+  // oldest first, so a rise over time reads left to right
+  const ordered = games.slice().sort((a,b) => (a.date||"").localeCompare(b.date||"") || a.index - b.index);
+  const player = $("dplayer").value, side = $("dside").value, depth = parseInt($("ddepth").value, 10);
+  const subs = [], fenSets = [];
+  let capped = false;
+  for(const [gi, game] of ordered.entries()){
+    if(fenSets.length >= DET.MAX_GAMES){ capped = true; break; }
+    const ss = detSubjects(game, gi, player, side);
+    if(!ss.length) continue;
+    const g = new Chess();
+    if(!g.load_pgn(game.pgn, {sloppy:true})) continue;
+    const list = g.history({verbose:true});
+    if(!list.length) continue;
+    const startFen = ((g.header && g.header()) || {}).FEN;
+    const rep = startFen ? new Chess(startFen) : new Chess(), fens = [rep.fen()];
+    list.forEach(m => { rep.move(m.san); fens.push(rep.fen()); });
+    const colors = new Set(ss.map(x => x.color));
+    const fi = fenSets.push({fens, list, game, colors}) - 1;
+    ss.forEach(x => subs.push({...x, moves:list, fi}));
+  }
+  if(!subs.length){
+    st.textContent = player.trim() ? `No game in that PGN has a player matching "${player.trim()}".` : "No playable games found in that PGN.";
+    return;
+  }
+  const token = ++dRunning;
+  $("dgo").disabled = true; $("dbar").style.display = "block"; $("dbarfill").style.width = "0";
+  // positions before a scored player's move get a top-3 search; the rest only need one line (for the eval after the move)
+  const tasks = [];
+  fenSets.forEach((fs, fi) => fs.fens.forEach((f, i) => tasks.push({fi, i, multi: i < fs.list.length && fs.colors.has(fs.list[i].color)})));
+  const out = fenSets.map(fs => new Array(fs.fens.length));
+  let nextT = 0, done = 0, failed = false, rpT = 0;
+  const CH = 2;
+  const run1 = (t, wk) => t.multi ? detAnalyze(fenSets[t.fi].fens[t.i], depth, wk) : analyze(fenSets[t.fi].fens[t.i], depth, wk);
+  const loop = async wk => {
+    if(!wk) return;
+    while(token===dRunning && !failed && !wk.dead){
+      const st0 = nextT; if(st0 >= tasks.length) return; nextT += CH;
+      for(let k=st0; k<Math.min(st0+CH, tasks.length); k++){
+        if(token!==dRunning || failed) return;
+        const t = tasks[k];
+        let r = await onW(wk, () => run1(t, wk));
+        if(!r && wk !== main && main && !main.dead) r = await onW(main, () => run1(t, main));
+        if(!r){ failed = true; return; }
+        out[t.fi][t.i] = r; done++;
+        if(!rpT) rpT = requestAnimationFrame(() => {
+          rpT = 0; if(token!==dRunning) return;
+          st.textContent = `Checking position ${done} of ${tasks.length}…`;
+          $("dbarfill").style.width = (done/tasks.length*100) + "%";
+        });
+      }
+    }
+  };
+  const nw = Math.min(maxW(), Math.ceil(tasks.length/CH)), jobs = [];
+  for(let i=0;i<nw;i++) jobs.push(getWorker(i).then(loop));
+  await Promise.all(jobs);
+  cancelAnimationFrame(rpT); rpT = 0;
+  if(token!==dRunning) return;
+  $("dbar").style.display = "none"; $("dgo").disabled = false;
+  if(failed){
+    st.textContent = "The engine stopped responding. Restarting it…";
+    await recoverEngine();
+    if(token===dRunning) st.textContent = engineReady ? "Engine restarted. Tap Run detector to try again." : "The engine could not restart. Reload the page.";
+    return;
+  }
+
+  subs.forEach(x => { x.res = detScore(x, fenSets[x.fi].fens, out[x.fi]); });
+
+  // series: group by player name, compare each game with that player's earlier games
+  const byPlayer = new Map();
+  subs.forEach(x => { const k = x.name.toLowerCase(); if(!byPlayer.has(k)) byPlayer.set(k, []); byPlayer.get(k).push(x); });
+  byPlayer.forEach(list => {
+    const prev = [];
+    list.forEach(x => {
+      if(x.res.n < DET.MIN_MOVES) return;
+      if(prev.length >= 2){
+        const base = prev.reduce((t,v) => t + v, 0) / prev.length;
+        if(x.res.rate - base >= DET.SERIES_JUMP && x.res.rate >= DET.SERIES_TO){
+          x.seriesNote = `This game's match rate (<b>${pct(x.res.rate)}</b>) is ${Math.round((x.res.rate-base)*100)} points above ${esc(x.name)}'s average over the ${prev.length} earlier game${prev.length===1?"":"s"} here (<b>${pct(base)}</b>).`;
+        }
+      }
+      prev.push(x.res.rate);
+    });
+  });
+  subs.forEach(x => { x.f = detFlags(x.res, x, x.seriesNote); });
+
+  const cnt = fn => subs.filter(x => !x.f.tiny && fn(x.f)).length;
+  const nFlag = cnt(f => f.any);
+  let h = `<div class="card dsum"><h2>Result</h2>
+    <div class="dstats">
+      <div class="dstat ${cnt(f => f.inv)?"inv":"ok"}"><strong>${cnt(f => f.inv)}</strong><small>Over ${pct(DET.INVESTIGATE)} (needs investigation)</small></div>
+      <div class="dstat ${cnt(f => f.prof || f.far)?"inv":"ok"}"><strong>${cnt(f => f.prof || f.far)}</strong><small>Engine-like precision / above rating</small></div>
+      <div class="dstat ${cnt(f => f.gj || f.sj)?"inv":"ok"}"><strong>${cnt(f => f.gj || f.sj)}</strong><small>Sudden jumps</small></div>
+      <div class="dstat"><strong>${subs.length}</strong><small>Player-games checked</small></div>
+    </div>
+    <p class="dnote">${nFlag ? `${nFlag} of ${subs.length} flagged. A flag is a reason to look closer, not proof of cheating.` : "Nothing flagged."} Book moves, forced moves, positions already decided (about ±7 pawns) and obvious moves (recaptures and only-moves) are not counted, because anyone plays those. Stockfish at this depth is the reference, so a stronger or different engine can disagree even when a player did use one.${capped ? ` Only the first ${DET.MAX_GAMES} games were checked.` : ""}</p>`;
+  if(fenSets.length > 1 && subs.length > 1) h += detSeriesChart(subs.map((x, i) => ({i, res:x.res, f:x.f})));
+  h += `</div>`;
+  subs.forEach(x => {
+    const g = x.game, opp = x.color==="w" ? g.black : g.white;
+    const label = x.name + (x.color==="w" ? " (White)" : " (Black)") + (x.elo ? " · " + x.elo : "");
+    const sub = ["vs " + opp, g.date && g.date.indexOf("?")<0 ? g.date : "", g.event, g.result].filter(Boolean).join(" · ");
+    h += detCard(x.res, label, sub, x.f, x.seriesNote);
+  });
+  $("dresults").innerHTML = h;
+  $("dresults").classList.remove("hide");
+  st.textContent = `Done. ${subs.length} player-game${subs.length===1?"":"s"} checked at depth ${depth} (top ${DET.MPV} moves) with ${BOT().name}.`;
+  $("dform").classList.add("hide"); $("dedit").classList.remove("hide");
+  $("dresults").scrollIntoView({behavior:"smooth", block:"start"});
+}
+$("dgo").onclick = async () => { try{ await runDetector(); }catch(err){ console.error(err); $("dstatus").textContent = "Something went wrong while checking that game. Try again."; $("dgo").disabled = false; $("dbar").style.display = "none"; } };
+$("dedit").onclick = () => { $("dform").classList.remove("hide"); $("dedit").classList.add("hide"); };
+$("dfromrev").onclick = () => {
+  const t = $("pgn").value.trim();
+  if(!t){ $("dstatus").textContent = "Nothing loaded in Review yet. Load a game there first, or paste a PGN here."; return; }
+  $("dpgn").value = t;
+  $("dstatus").textContent = "Loaded the game from Review. Tap Run detector.";
+};
+$("dimport").onclick = () => $("dfile").click();
+$("dfile").onchange = e => {
+  const f = e.target.files[0]; if(!f) return;
+  const r = new FileReader();
+  r.onload = () => { $("dpgn").value = String(r.result).trim(); $("dstatus").textContent = "Loaded " + f.name + ". Tap Run detector."; };
+  r.onerror = () => { $("dstatus").textContent = "Could not read that file."; };
+  r.readAsText(f); e.target.value = "";
+};
+
 /* ================= Tabs ================= */
 function showTab(t){
   document.body.dataset.tab = t;
@@ -4913,6 +5371,7 @@ function showTab(t){
   $("reviewPanel").classList.toggle("hide", t!=="review");
   $("openPanel").classList.toggle("hide", t!=="open");
   $("enginePanel").classList.toggle("hide", t!=="engine");
+  $("detectPanel").classList.toggle("hide", t!=="detect");
   $("tabPlay").classList.toggle("on", t==="play");
   $("tabFriends").classList.toggle("on", t==="friends");
   if(t==="friends"){ if(!fg) fStart(); else fRender(); }
@@ -4920,10 +5379,12 @@ function showTab(t){
   $("tabReview").classList.toggle("on", t==="review");
   $("tabOpen").classList.toggle("on", t==="open");
   $("tabEngine").classList.toggle("on", t==="engine");
+  $("tabDetect").classList.toggle("on", t==="detect");
   if(t!=="learn"){ learnToken++; if(LP===null && !$("lpuz").classList.contains("hide")) lHome(); } // leaving Learn cancels any puzzle being built
   if(t==="learn"){ lLoadPack(); if(!engineReady) startEngine(engineGen); if(!LP && !$("lpuz").classList.contains("hide")) lHome(); lDraw(); }
   if(t==="open") renderOpenList();
   if(t==="engine" && !engineReady) startEngine(engineGen);
+  if(t==="detect"){ if(!engineReady) startEngine(engineGen); else for(let i=0;i<maxW();i++) getWorker(i); }
   if(t==="review" && engineReady) for(let i=0;i<maxW();i++) getWorker(i); // warm up helper workers
 }
 $("tabPlay").onclick = () => showTab("play");
@@ -4932,6 +5393,7 @@ $("tabLearn").onclick = () => showTab("learn");
 $("tabReview").onclick = () => showTab("review");
 $("tabOpen").onclick = () => showTab("open");
 $("tabEngine").onclick = () => showTab("engine");
+$("tabDetect").onclick = () => showTab("detect");
 // Full screen toggle (falls back to a focus mode where the API is unavailable, e.g. iPhone Safari)
 const fsBtn = $("fsbtn");
 const fsEl = () => document.fullscreenElement || document.webkitFullscreenElement;
