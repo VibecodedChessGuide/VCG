@@ -17,7 +17,7 @@
     Learn / Openings / Engine styles .......................... 338-397
     touch target sizes ........................................ 398-403
     mobile layout (pinned Play board) ......................... 404-441
-    desktop rail layout ....................................... 442-574
+    desktop rail layout ....................................... 442-575
   BODY MARKUP ................................................. 576-934
     rail: tabs, settings, fullscreen .......................... 579-617
     Play tab .................................................. 618-686
@@ -25,7 +25,7 @@
     Openings tab (explorer + trainer) ......................... 739-831
     Engine tab ................................................ 832-843
     Review tab ................................................ 844-934
-  JAVASCRIPT (inline) ......................................... 935-4362
+  JAVASCRIPT (inline) ......................................... 935-4382
     config: engine paths, bots, boards, levels ................ 937-1011
     sound effects ............................................. 1012-1067
     engine worker pool + search ............................... 1068-1307
@@ -39,22 +39,22 @@
     square helpers + right-click marks ........................ 2303-2353
     Play mode: hints, engine moves ............................ 2354-2700
       pointer input (tap / drag) .............................. 2543-2700
-    Review mode ............................................... 2701-3279
-    board + piece set selection ............................... 3280-3302
-    Learn: seeded engine puzzles .............................. 3303-3965
-      theme tests (mate, tactics, endgames) ................... 3346-3411
-      seeded start positions .................................. 3412-3457
-      side cooperation for puzzle building .................... 3458-3497
-      puzzle difficulty rating ................................ 3498-3592
-      puzzle UI state ......................................... 3593-3825
-      puzzle move checking .................................... 3826-3909
-      puzzle board input ...................................... 3910-3965
-    opening trainer (repertoire drills) ....................... 3966-4288
-      trainer starter lines ................................... 4031-4045
-      trainer home screen ..................................... 4046-4106
-      trainer drill ........................................... 4107-4288
-    tab switching + boot ...................................... 4289-4362
-  SETTINGS POPOVER SCRIPT ..................................... 4363-4372
+    Review mode ............................................... 2701-3299
+    board + piece set selection ............................... 3300-3322
+    Learn: seeded engine puzzles .............................. 3323-3985
+      theme tests (mate, tactics, endgames) ................... 3366-3431
+      seeded start positions .................................. 3432-3477
+      side cooperation for puzzle building .................... 3478-3517
+      puzzle difficulty rating ................................ 3518-3612
+      puzzle UI state ......................................... 3613-3845
+      puzzle move checking .................................... 3846-3929
+      puzzle board input ...................................... 3930-3985
+    opening trainer (repertoire drills) ....................... 3986-4308
+      trainer starter lines ................................... 4051-4065
+      trainer home screen ..................................... 4066-4126
+      trainer drill ........................................... 4127-4308
+    tab switching + boot ...................................... 4309-4382
+  SETTINGS POPOVER SCRIPT ..................................... 4383-4392
   -------------------------------------------------------------------------
   Keep this map updated after large edits (regenerate line numbers).
 
@@ -2793,6 +2793,10 @@ function reviewedStats(side){
   const fixed = {inacc:0, mistake:0, blunder:0};
   const losses = [];
   let acc = 0, lossSum = 0, bestMoves = 0, n = 0;
+  // Elo-only stats: moves played from an already-lost position (<= -6 pawns for the mover)
+  // say little about strength because the clipped eval hides further damage.
+  const eLosses = [];
+  let eAcc = 0, eLossSum = 0, eBest = 0, eN = 0, skipped = 0;
   let brilliants = 0, greatMoves = 0, missedWins = 0, missedMates = 0, missedTactics = 0, soundSacs = 0, badSacs = 0;
   moves.forEach((m,i) => {
     if(side!=="wb" && m.color!==side) return;
@@ -2809,6 +2813,13 @@ function reviewedStats(side){
     acc += rv.uci===pos[i].best ? 100 : Math.max(0, Math.min(100, 103.17*Math.exp(-0.04354*d) - 3.17));
     const l = Math.min(400, rv.loss);
     losses.push(l); lossSum += l;
+    const eb = pos[i].mate!=null ? (pos[i].mate*mover>0 ? 1e5 : -1e5) : pos[i].cp*mover;
+    if(eb <= -600 && side!=="wb"){ skipped++; }
+    else{
+      const a1 = rv.uci===pos[i].best ? 100 : Math.max(0, Math.min(100, 103.17*Math.exp(-0.04354*d) - 3.17));
+      eLosses.push(l); eLossSum += l; eAcc += a1; eN++;
+      if(rv.uci===pos[i].best) eBest++;
+    }
     if(l >= 300) fixed.blunder++;
     else if(l >= 100) fixed.mistake++;
     else if(l >= 50) fixed.inacc++;
@@ -2819,7 +2830,12 @@ function reviewedStats(side){
   const sorted = losses.slice().sort((a,b)=>a-b);
   const median = n ? sorted[Math.floor((n-1)/2)] : 0;
   const variance = n ? losses.reduce((s,l)=>s+(l-acpl)*(l-acpl),0)/n : 0;
+  // fall back to all moves if almost nothing was played from a playable position
+  const useE = eN >= 3;
+  const eAcpl = useE ? eLossSum/eN : acpl;
+  const eVar = useE ? eLosses.reduce((t,l)=>t+(l-eAcpl)*(l-eAcpl),0)/eN : variance;
   return {counts, fixed, losses, avg:n?acc/n:0, acpl, median, std:Math.sqrt(variance), bestRate:n?bestMoves/n:0, n,
+    e:{n:useE?eN:n, acpl:eAcpl, avg:useE?eAcc/eN:(n?acc/n:0), bestRate:useE?eBest/eN:(n?bestMoves/n:0), std:Math.sqrt(eVar), skipped:useE?skipped:0},
     brilliants, greatMoves, missedWins, missedMates, missedTactics, soundSacs, badSacs};
 }
 function interp(x, pts){
@@ -2858,26 +2874,30 @@ const MISS_ELO = [
 function estimateElo(color){
   const s = reviewedStats(color);
   if(!s.n) return null;
-  const acplElo = interp(s.acpl, ACPL_ELO);
-  const accElo = interp(s.avg, ACC_ELO);
+  const e = s.e;
+  const acplElo = interp(e.acpl, ACPL_ELO);
+  const accElo = interp(e.avg, ACC_ELO);
+  // errors are counted over ALL moves: hanging pieces in a lost position still count
   const errScore = Math.min(20, (s.fixed.blunder*3 + s.fixed.mistake*1.5 + s.fixed.inacc*0.5) / s.n * 40);
   const errElo = interp(errScore, ERR_ELO);
-  const bestElo = interp(s.bestRate*100, BEST_ELO);
-  const missRate = (s.missedMates*2 + s.missedWins*1.5 + s.missedTactics*0.75) / s.n * 10;
+  const bestElo = interp(e.bestRate*100, BEST_ELO);
+  const missRate = (s.missedMates*2 + s.missedWins*1.5 + s.missedTactics*0.75) / Math.max(4, e.n) * 10;
   const missElo = interp(missRate, MISS_ELO);
   let perf = 0.45*acplElo + 0.15*accElo + 0.15*errElo + 0.15*bestElo + 0.10*missElo;
   const bonus = Math.min(70, s.brilliants*10 + s.soundSacs*4);
   perf += bonus - Math.min(80, s.badSacs*6);
-  const penalty = Math.min(100, Math.max(0, (s.std - 50) * 1.5));
+  // each blunder / mistake is direct evidence of weakness (esp. hung pieces, allowed mates)
+  perf -= Math.min(350, s.fixed.blunder*70 + s.fixed.mistake*20);
+  const penalty = Math.min(100, Math.max(0, (e.std - 50) * 1.5));
   perf -= penalty;
-  const k = 0.55 + 0.25 * Math.min(1, s.n / 40);
+  const k = 0.55 + 0.25 * Math.min(1, e.n / 40);
   let elo = 1200 + (perf - 1200) * k;
   elo = Math.max(400, Math.min(2300, Math.round(elo/10)*10));
-  const width = Math.min(300, Math.max(150, 120 + 500/Math.sqrt(Math.max(10, s.n))));
+  const width = Math.min(300, Math.max(150, 120 + 500/Math.sqrt(Math.max(10, e.n))));
   const low = Math.max(300, Math.round((elo-width)/50)*50);
   const high = Math.min(2500, Math.round((elo+width)/50)*50);
-  return {elo, low, high, n:s.n, acc:Math.round(s.avg), acpl:Math.round(s.acpl),
-    median:Math.round(s.median), std:Math.round(s.std), bestRate:Math.round(s.bestRate*100),
+  return {elo, low, high, n:s.n, en:e.n, skipped:e.skipped, acc:Math.round(e.avg), acpl:Math.round(e.acpl),
+    median:Math.round(s.median), std:Math.round(e.std), bestRate:Math.round(e.bestRate*100),
     blunders:s.fixed.blunder, mistakes:s.fixed.mistake, inaccuracies:s.fixed.inacc,
     brilliants:s.brilliants, missedWins:s.missedWins, missedMates:s.missedMates, missedTactics:s.missedTactics,
     soundSacs:s.soundSacs, badSacs:s.badSacs,
@@ -2900,7 +2920,7 @@ function drawSummary(){
     const e = estimateElo(side);
     if(e){
       elo = `<div class="elo" title="${tip}"><strong>~${e.elo}</strong><small>You • estimated Elo</small></div>`;
-      detail = `Single-game range ~${e.low}–${e.high} · ${e.n} moves · ${e.acc}% accuracy · ${e.acpl} ACPL` +
+      detail = `Single-game range ~${e.low}–${e.high} · ${e.en} of ${e.n} moves used${e.skipped?` (${e.skipped} played from lost positions skipped)`:""} · ${e.acc}% accuracy · ${e.acpl} ACPL` +
         ((e.missedWins+e.missedMates) ? ` · ${e.missedWins+e.missedMates} missed win${(e.missedWins+e.missedMates)===1?"":"s"}` : "") +
         (e.missedTactics ? ` · ${e.missedTactics} missed tactic${e.missedTactics===1?"":"s"}` : "") +
         (e.brilliants ? ` · ${e.brilliants} brilliant` : "");
@@ -2968,7 +2988,7 @@ function buildReport(){
     const e = estimateElo(side);
     if(e){
       out.push("- Estimated Elo (" + who + "): ~" + e.elo + " (range " + e.low + "-" + e.high + "; single-game estimate)");
-      out.push("- Elo inputs (" + who + "): " + e.n + " moves, " + e.acc + "% accuracy, " + e.acpl + " ACPL, " + e.bestRate + "% engine-best moves, " + e.blunders + " blunders, " + e.mistakes + " mistakes, " + e.inaccuracies + " inaccuracies (fixed 50/100/300 cp thresholds), " + e.std + " cp loss std dev, " + e.missedWins + " missed wins, " + e.missedMates + " missed mates, " + e.missedTactics + " missed tactics, " + e.brilliants + " brilliants, " + e.soundSacs + " sound sacrifices, " + e.badSacs + " unsound sacrifices");
+      out.push("- Elo inputs (" + who + "): " + e.en + " of " + e.n + " moves used (" + e.skipped + " played from already-lost positions are excluded from accuracy/ACPL/best-move stats), " + e.acc + "% accuracy, " + e.acpl + " ACPL, " + e.bestRate + "% engine-best moves, " + e.blunders + " blunders, " + e.mistakes + " mistakes, " + e.inaccuracies + " inaccuracies (fixed 50/100/300 cp thresholds), " + e.std + " cp loss std dev, " + e.missedWins + " missed wins, " + e.missedMates + " missed mates, " + e.missedTactics + " missed tactics, " + e.brilliants + " brilliants, " + e.soundSacs + " sound sacrifices, " + e.badSacs + " unsound sacrifices");
       out.push("- Elo model (" + who + "): ACPL ~" + e.parts.acpl + ", accuracy ~" + e.parts.acc + ", error rate ~" + e.parts.err + ", best-move rate ~" + e.parts.best + ", missed chances ~" + e.parts.miss + ", brilliant bonus +" + e.parts.bonus + " -> ~" + e.elo);
       const o = estimateElo(side==="w" ? "b" : "w");
       if(o) out.push("- Opponent Elo inputs: " + o.n + " moves, " + o.acc + "% accuracy, " + o.acpl + " ACPL, " + o.bestRate + "% engine-best moves, " + o.blunders + " blunders, " + o.mistakes + " mistakes, " + o.inaccuracies + " inaccuracies, " + o.std + " cp loss std dev");
