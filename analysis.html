@@ -6,7 +6,7 @@
   FILE MAP — analysis.html (single-file app; jump straight to the ranges you need)
   Line numbers are absolute in this file. Read only the section you need.
   -------------------------------------------------------------------------
-  HEAD / META / CSS ............................................ 1-689
+  HEAD / META / CSS ............................................ 1-694
     theme tokens + light mode .................................. 75-121
     base controls + buttons .................................... 122-162
     app shell: rail, tabs, settings ............................ 163-199
@@ -19,48 +19,48 @@
     mobile layout (pinned Play board) .......................... 411-448
     desktop rail layout ........................................ 449-582
     Friends tab styles (player rows, clocks, actions) .......... 583-674
-    analysis-only shell + boot screen .......................... 675-688
-  BODY MARKUP .................................................. 691-1083
-    rail: tabs, settings, fullscreen ........................... 695-734
-    Play tab ................................................... 735-803
-    Friends tab (player rows, board, facing switch) ............ 804-829
-    Learn tab .................................................. 830-881
-    Openings tab (explorer + trainer) .......................... 882-974
-    Engine tab ................................................. 975-986
-    Review tab ................................................. 987-1083
-  JAVASCRIPT (inline) .......................................... 1086-5051
-    config: engine paths, bots, boards, levels ................. 1087-1160
-    sound effects .............................................. 1161-1216
-    engine worker pool + search ................................ 1217-1456
-    general helpers ............................................ 1457-1490
-    tactics: forks, pins, hanging pieces ....................... 1491-1562
-    openings dataset + explorer ................................ 1563-1856
-    background chess.js worker ................................. 1857-1899
-    move judging / classifications ............................. 1900-2093
-    predictions after bad moves ................................ 2094-2273
-    board drawing (SVG) ........................................ 2274-2451
-    square helpers + right-click marks ......................... 2452-2502
-    Play mode: hints, engine moves ............................. 2503-2849
-      pointer input (tap / drag) ............................... 2692-2849
-    Friends mode (same device, no engine) ...................... 2850-3118
-      piece-facing switch (fRot, fFace, fRotPaint) ............. 2856-2882, 3105-3110
-    Review mode ................................................ 3119-3911
-      chess.com link loader + compressed share links ........... 3719-3911
-    board + piece set selection ................................ 3912-3934
-    Learn: seeded engine puzzles ............................... 3935-4597
-      theme tests (mate, tactics, endgames) .................... 3978-4043
-      seeded start positions ................................... 4044-4089
-      side cooperation for puzzle building ..................... 4090-4129
-      puzzle difficulty rating ................................. 4130-4224
-      puzzle UI state .......................................... 4225-4457
-      puzzle move checking ..................................... 4458-4541
-      puzzle board input ....................................... 4542-4597
-    opening trainer (repertoire drills) ........................ 4598-4920
-      trainer starter lines .................................... 4663-4677
-      trainer home screen ...................................... 4678-4738
-      trainer drill ............................................ 4739-4920
-    tab switching + boot ....................................... 4921-5051
-  SETTINGS POPOVER SCRIPT ...................................... 5052-5061
+    analysis-only shell + boot screen .......................... 675-693
+  BODY MARKUP .................................................. 696-1088
+    rail: tabs, settings, fullscreen ........................... 700-739
+    Play tab ................................................... 740-808
+    Friends tab (player rows, board, facing switch) ............ 809-834
+    Learn tab .................................................. 835-886
+    Openings tab (explorer + trainer) .......................... 887-979
+    Engine tab ................................................. 980-991
+    Review tab ................................................. 992-1088
+  JAVASCRIPT (inline) .......................................... 1091-5097
+    config: engine paths, bots, boards, levels ................. 1092-1165
+    sound effects .............................................. 1166-1221
+    engine worker pool + search ................................ 1222-1461
+    general helpers ............................................ 1462-1495
+    tactics: forks, pins, hanging pieces ....................... 1496-1567
+    openings dataset + explorer ................................ 1568-1861
+    background chess.js worker ................................. 1862-1904
+    move judging / classifications ............................. 1905-2098
+    predictions after bad moves ................................ 2099-2278
+    board drawing (SVG) ........................................ 2279-2456
+    square helpers + right-click marks ......................... 2457-2507
+    Play mode: hints, engine moves ............................. 2508-2854
+      pointer input (tap / drag) ............................... 2697-2854
+    Friends mode (same device, no engine) ...................... 2855-3123
+      piece-facing switch (fRot, fFace, fRotPaint) ............. 2861-2887, 3110-3115
+    Review mode ................................................ 3124-3916
+      chess.com link loader + compressed share links ........... 3724-3916
+    board + piece set selection ................................ 3917-3939
+    Learn: seeded engine puzzles ............................... 3940-4602
+      theme tests (mate, tactics, endgames) .................... 3983-4048
+      seeded start positions ................................... 4049-4094
+      side cooperation for puzzle building ..................... 4095-4134
+      puzzle difficulty rating ................................. 4135-4229
+      puzzle UI state .......................................... 4230-4462
+      puzzle move checking ..................................... 4463-4546
+      puzzle board input ....................................... 4547-4602
+    opening trainer (repertoire drills) ........................ 4603-4925
+      trainer starter lines .................................... 4668-4682
+      trainer home screen ...................................... 4683-4743
+      trainer drill ............................................ 4744-4925
+    tab switching + boot ....................................... 4926-5097
+  SETTINGS POPOVER SCRIPT ...................................... 5098-5107
   -------------------------------------------------------------------------
   Keep this map updated after edits (regenerate line numbers).
 -->
@@ -686,10 +686,15 @@ body{--tabH:0px}
 #bootscreen h1{margin:0;font-size:1.3rem}
 #bootscreen p{margin:0;max-width:26rem;color:var(--muted);font-size:.9rem;line-height:1.45}
 @keyframes bspin{to{transform:rotate(360deg)}}
+/* shared link (?z= / ?pgn=): view-only, no input card; the analysis shows in the boot screen */
+body.shared #rinput{display:none!important}
+#bootbar{display:none;width:min(20rem,70vw);height:.4rem;border-radius:99px;background:var(--raise);overflow:hidden}
+#bootbar.on{display:block}
+#bootfill{display:block;height:100%;width:0;background:var(--good);transition:width .2s ease}
 </style>
 </head>
 <body data-tab="play">
-<div id="bootscreen"><div class="spin"></div><h1>Deep analysis</h1><p id="bootmsg">Loading Stockfish…</p></div>
+<div id="bootscreen"><div class="spin"></div><h1>Deep analysis</h1><p id="bootmsg">Loading Stockfish…</p><div id="bootbar"><i id="bootfill"></i></div></div>
 <div class="app">
 
   <aside class="rail">
@@ -4996,52 +5001,93 @@ if(document.readyState === "complete") bootEngine();
 else { addEventListener("load", bootEngine, {once:true}); setTimeout(bootEngine, 3000); }
 idle(loadOpenings);
 
-// Shared link (?z=... or legacy ?pgn=...): open Review and start the analysis as soon as Stockfish is ready.
-(async function(){
-  let text = null, sd = null, depth = null, z = null;
+// Shared link (?z=... or legacy ?pgn=...): view-only page. No editing, and the analysis itself
+// runs behind the main loading screen, which only lifts once the finished review is ready.
+const SHARED_LINK = (() => {
+  let s = false;
   new URLSearchParams(location.search).forEach((v, k) => {
     k = k.toLowerCase();
-    if(k==="pgn" && v.trim() && text===null) text = v.trim();
-    if(k==="side") sd = v;
-    if(k==="depth") depth = v;
-    if(k==="z" && v.trim()) z = v.trim();
+    if((k==="pgn" || k==="z") && v.trim()) s = true;
   });
-  if(z){
-    const data = await unpackShare(z);
-    if(data){
-      if(typeof data.p === "string") text = data.p.trim();
-      if(data.s) sd = data.s;
-      if(data.d) depth = data.d;
+  return s;
+})();
+let sharedBusy = SHARED_LINK; // true until the shared game has been analysed (or failed)
+if(SHARED_LINK) document.body.classList.add("shared");
+// Finish the shared-link flow. If it failed, unlock the form so the page is never a dead end.
+function sharedEnd(failed){
+  if(failed) document.body.classList.remove("shared");
+  sharedBusy = false;
+}
+(async function(){
+  if(!SHARED_LINK) return;
+  try{
+    let text = null, sd = null, depth = null, z = null;
+    new URLSearchParams(location.search).forEach((v, k) => {
+      k = k.toLowerCase();
+      if(k==="pgn" && v.trim() && text===null) text = v.trim();
+      if(k==="side") sd = v;
+      if(k==="depth") depth = v;
+      if(k==="z" && v.trim()) z = v.trim();
+    });
+    if(z){
+      const data = await unpackShare(z);
+      if(data){
+        if(typeof data.p === "string") text = data.p.trim();
+        if(data.s) sd = data.s;
+        if(data.d) depth = data.d;
+      }
     }
+    if(text===null){
+      $("status").textContent = "The shared link could not be read. Paste a PGN or a chess.com link below.";
+      return sharedEnd(true);
+    }
+    $("pgn").value = text;
+    $("side").value = ["w","b","wb"].includes(sd) ? sd : "wb";
+    $("depth").value = "13";
+    showTab("review");
+    const probe = new Chess();
+    if(!probe.load_pgn(text, {sloppy:true}) || !probe.history().length){
+      $("status").textContent = "The shared link doesn't contain a readable game. Paste a PGN or a chess.com link below.";
+      return sharedEnd(true);
+    }
+    $("status").textContent = "Shared game loaded. Waiting for Stockfish to start the analysis…";
+    const t0 = Date.now();
+    const go = async () => {
+      if(engineReady){
+        await run();
+        return sharedEnd($("results").classList.contains("hide")); // results hidden = analysis failed
+      }
+      if(Date.now() - t0 > 240000){
+        $("status").textContent = "Stockfish took too long to start. Reload the page to try again.";
+        return sharedEnd(true);
+      }
+      setTimeout(go, 300);
+    };
+    go();
+  }catch(err){
+    console.error(err);
+    $("status").textContent = "The shared link could not be opened. Paste a PGN or a chess.com link below.";
+    sharedEnd(true);
   }
-  if(text===null) return;
-  $("pgn").value = text;
-  $("side").value = ["w","b","wb"].includes(sd) ? sd : "wb";
-  $("depth").value = "13";
-  showTab("review");
-  const probe = new Chess();
-  if(!probe.load_pgn(text, {sloppy:true}) || !probe.history().length){
-    $("status").textContent = "The shared link doesn't contain a readable game. Paste a PGN or a chess.com link below.";
-    return;
-  }
-  $("status").textContent = "Shared game loaded. Waiting for Stockfish to start the analysis…";
-  const t0 = Date.now();
-  const go = () => {
-    if(engineReady) return run();
-    if(Date.now() - t0 > 240000){ $("status").textContent = "Stockfish took too long to start. Reload the page to try again."; return; }
-    setTimeout(go, 300);
-  };
-  go();
 })();
 
-// Analysis-only page: reveal the Review tab and drop the loading screen once the engine is up.
+// Analysis-only page: reveal the Review tab and drop the loading screen.
+// Normal visit: once the engine is up. Shared link: once the analysis is finished too, so the
+// whole load (engine download + analysing every position) is one loading screen with one progress bar.
 (function(){
   showTab("review");
-  const b = $("bootscreen"), m = $("bootmsg"), t0 = Date.now();
+  const b = $("bootscreen"), m = $("bootmsg"), bar = $("bootbar"), fill = $("bootfill"), t0 = Date.now();
   const reveal = () => { b.classList.add("gone"); setTimeout(() => b.remove(), 400); };
   const tick = () => {
-    if(engineReady){ reveal(); return; }
     const st = ($("status") && $("status").textContent) || "";
+    if(SHARED_LINK && sharedBusy){
+      if(/Could not load/.test(st)){ sharedEnd(true); reveal(); return; }
+      if(m && st) m.textContent = st;
+      if($("bar").style.display === "block"){ bar.classList.add("on"); fill.style.width = $("barfill").style.width || "0"; }
+      setTimeout(tick, 150);
+      return;
+    }
+    if(SHARED_LINK || engineReady){ reveal(); return; }
     if(m && st) m.textContent = st;
     if(/Could not load/.test(st) || Date.now() - t0 > 300000){ reveal(); return; }
     setTimeout(tick, 250);
