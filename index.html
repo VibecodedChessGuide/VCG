@@ -6,8 +6,8 @@
   FILE MAP — index.html (single-file app; jump straight to the ranges you need)
   Line numbers are absolute in this file. Read only the section you need.
   -------------------------------------------------------------------------
-  HEAD / META / CSS ........................................... 1-574
-    theme tokens + light mode ................................. 74-119
+  HEAD / META / CSS ........................................... 1-603
+    theme tokens + light mode ................................. 73-118
     base controls + buttons ................................... 120-160
     app shell: rail, tabs, settings ........................... 161-197
     page wrapper + sizing ..................................... 198-200
@@ -15,52 +15,52 @@
     Play tab styles ........................................... 242-282
     Review tab styles ......................................... 283-337
     Learn / Openings / Engine styles .......................... 338-397
-    touch target sizes ........................................ 398-403
-    mobile layout (pinned Play board) ......................... 404-441
-    desktop rail layout ....................................... 442-574
-  BODY MARKUP ................................................. 576-934
-    rail: tabs, settings, fullscreen .......................... 579-617
-    Play tab .................................................. 618-686
-    Learn tab ................................................. 687-738
-    Openings tab (explorer + trainer) ......................... 739-831
-    Engine tab ................................................ 832-843
-    Review tab ................................................ 844-934
-  JAVASCRIPT (inline) ......................................... 935-4382
-    config: engine paths, bots, boards, levels ................ 937-1011
-    sound effects ............................................. 1012-1067
-    engine worker pool + search ............................... 1068-1307
-    general helpers ........................................... 1308-1341
-    tactics: forks, pins, hanging pieces ...................... 1342-1413
-    openings dataset + explorer ............................... 1414-1707
-    background chess.js worker ................................ 1708-1750
-    move judging / classifications ............................ 1751-1944
-    predictions after bad moves ............................... 1945-2124
-    board drawing (SVG) ....................................... 2125-2302
-    square helpers + right-click marks ........................ 2303-2353
-    Play mode: hints, engine moves ............................ 2354-2700
-      pointer input (tap / drag) .............................. 2543-2700
-    Review mode ............................................... 2701-3299
-    board + piece set selection ............................... 3300-3322
-    Learn: seeded engine puzzles .............................. 3323-3985
-      theme tests (mate, tactics, endgames) ................... 3366-3431
-      seeded start positions .................................. 3432-3477
-      side cooperation for puzzle building .................... 3478-3517
-      puzzle difficulty rating ................................ 3518-3612
-      puzzle UI state ......................................... 3613-3845
-      puzzle move checking .................................... 3846-3929
-      puzzle board input ...................................... 3930-3985
-    opening trainer (repertoire drills) ....................... 3986-4308
-      trainer starter lines ................................... 4051-4065
-      trainer home screen ..................................... 4066-4126
-      trainer drill ........................................... 4127-4308
-    tab switching + boot ...................................... 4309-4382
-  SETTINGS POPOVER SCRIPT ..................................... 4383-4392
+    touch target sizes ........................................ 398-402
+    mobile layout (pinned Play board) ......................... 403-440
+    desktop rail layout ....................................... 441-574
+    Friends tab styles (strips, piece-facing switch) .......... 575-602
+  BODY MARKUP ................................................. 605-981
+    rail: tabs, settings, fullscreen .......................... 608-647
+    Play tab .................................................. 648-716
+    Friends tab (two strips, board, piece-facing switch) ...... 717-732
+    Learn tab ................................................. 733-784
+    Openings tab (explorer + trainer) ......................... 785-877
+    Engine tab ................................................ 878-889
+    Review tab ................................................ 890-981
+  JAVASCRIPT (inline) ......................................... 982-4626
+    config: engine paths, bots, boards, levels ................ 983-1057
+    sound effects ............................................. 1058-1113
+    engine worker pool + search ............................... 1114-1353
+    general helpers ........................................... 1354-1387
+    tactics: forks, pins, hanging pieces ...................... 1388-1459
+    openings dataset + explorer ............................... 1460-1753
+    background chess.js worker ................................ 1754-1796
+    move judging / classifications ............................ 1797-1990
+    predictions after bad moves ............................... 1991-2170
+    board drawing (SVG) ....................................... 2171-2348
+    square helpers + right-click marks ........................ 2349-2399
+    Play mode: hints, engine moves ............................ 2400-2746
+      pointer input (tap / drag) .............................. 2589-2746
+    Friends mode (same device, no engine) ..................... 2747-2940
+      piece-facing switch (fRot, fFace, fRotPaint) ............ 2751-2778, 2926-2933
+    Review mode ............................................... 2941-3539
+    board + piece set selection ............................... 3540-3562
+    Learn: seeded engine puzzles .............................. 3563-4225
+      theme tests (mate, tactics, endgames) ................... 3606-3671
+      seeded start positions .................................. 3672-3717
+      side cooperation for puzzle building .................... 3718-3757
+      puzzle difficulty rating ................................ 3758-3852
+      puzzle UI state ......................................... 3853-4085
+      puzzle move checking .................................... 4086-4169
+      puzzle board input ...................................... 4170-4225
+    opening trainer (repertoire drills) ....................... 4226-4548
+      trainer starter lines ................................... 4291-4305
+      trainer home screen ..................................... 4306-4366
+      trainer drill ........................................... 4367-4548
+    tab switching + boot ...................................... 4549-4626
+  SETTINGS POPOVER SCRIPT ..................................... 4627-4636
   -------------------------------------------------------------------------
-  Keep this map updated after large edits (regenerate line numbers).
-
-
-
-
+  Keep this map updated after edits (regenerate line numbers).
 -->
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Chess Analysis</title>
@@ -167,7 +167,7 @@ textarea{display:block;width:100%;height:7rem;padding:.75rem;resize:vertical;fon
 .railfoot{margin-left:auto;display:flex;align-items:center;gap:.15rem}
 
 .tabs{position:fixed;z-index:40;left:0;right:0;bottom:0;height:calc(var(--tabH) + var(--sab));padding:0 env(safe-area-inset-right) var(--sab) env(safe-area-inset-left);
-  display:grid;grid-template-columns:repeat(5,1fr);background:var(--panel);box-shadow:0 -1px 0 rgba(0,0,0,.28)}
+  display:grid;grid-template-columns:repeat(6,1fr);background:var(--panel);box-shadow:0 -1px 0 rgba(0,0,0,.28)}
 .tabs button,.railbtn,.settings summary{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.18rem;
   background:none;border:0;border-radius:0;color:var(--muted);font:700 .68rem/1.1 inherit;font-family:inherit;padding:.4rem 0;position:relative;cursor:pointer;
   list-style:none;transition:color .12s,background .12s}
@@ -403,8 +403,8 @@ body.cssfs .tabs+*{}
 /* =====================================================================
    MOBILE · PLAY: board pinned, panel below scrolls
    ===================================================================== */
-body[data-tab="play"]{height:100vh;height:100dvh;overflow:hidden}
-body[data-tab="play"] .wrap{height:100vh;height:100dvh;display:flex;flex-direction:column;padding-inline:0;padding-bottom:calc(var(--tabH) + var(--sab))}
+body[data-tab="play"],body[data-tab="friends"] {height:100vh;height:100dvh;overflow:hidden}
+body[data-tab="play"] .wrap,body[data-tab="friends"] .wrap {height:100vh;height:100dvh;display:flex;flex-direction:column;padding-inline:0;padding-bottom:calc(var(--tabH) + var(--sab))}
 body[data-tab="play"] #playPanel{flex:1;min-height:0;display:flex;flex-direction:column;gap:0}
 body[data-tab="play"] .c-board{flex:none;padding:.35rem max(.6rem,env(safe-area-inset-left)) 0 max(.6rem,env(safe-area-inset-right))}
 body[data-tab="play"] .boardgrid{--B:max(14rem,min(calc(100vw - 1.2rem - 1.9rem),calc(100dvh - var(--topH) - var(--tabH) - var(--sat) - var(--sab) - 22rem)))}
@@ -459,8 +459,8 @@ body[data-tab="play"] #pnew{padding:.7rem 1rem;font-size:1.08rem}
   .railbtn span,.settings summary span{display:block}
   .sbody{left:calc(var(--rail) + env(safe-area-inset-left) + .6rem);right:auto;top:auto;bottom:.8rem;width:min(26rem,calc(100vw - var(--rail) - 1.5rem));max-height:calc(100dvh - 1.6rem)}
   .wrap{max-width:none;padding:var(--pad)}
-  body[data-tab="play"] .wrap,.wrap{padding:var(--pad)}
-  body[data-tab="play"] .wrap{padding-bottom:var(--pad)}
+  body[data-tab="play"] .wrap,.wrap,body[data-tab="friends"] .wrap {padding:var(--pad)}
+  body[data-tab="play"] .wrap,body[data-tab="friends"] .wrap {padding-bottom:var(--pad)}
   body.cssfs{--rail:0px}
   body.cssfs .rail{left:auto;right:.5rem;top:.5rem;bottom:auto;width:auto;height:auto;padding:0;background:transparent}
 
@@ -571,6 +571,35 @@ body[data-tab="play"] #pnew{padding:.7rem 1rem;font-size:1.08rem}
   .brand{padding:0}
   .logo{width:1.6rem;height:1.6rem}
 }
+
+/* ---------- PLAY WITH FRIENDS: two players sit opposite each other, device flat between them ---------- */
+#friendsPanel{--FB:max(14rem,min(calc(100vw - 1.2rem),calc(100dvh - var(--topH) - var(--tabH) - var(--sat) - var(--sab) - 17rem)));
+  flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.5rem}
+#friendsPanel.hide{display:none}
+#friendsPanel .bd{width:var(--FB);flex:none;touch-action:none}
+.fstrip{width:var(--FB);flex:none;background:var(--panel);border-radius:.7rem;padding:.45rem .6rem .55rem;display:flex;flex-direction:column;gap:.35rem}
+.fstrip.top{transform:rotate(180deg)}
+#friendsPanel.norot .fstrip.top{transform:none}
+.fhead{display:flex;align-items:center;gap:.5rem;min-width:0}
+.fhead .sw{width:1.6rem;height:1.6rem;flex:none}
+.fname{flex:1;min-width:0;padding:.35rem .55rem;font-weight:800;font-size:1rem;background:var(--deep)}
+.ftag{flex:none;font-size:.72rem;font-weight:800;color:var(--good);white-space:nowrap;visibility:hidden}
+.fstrip.turn .ftag{visibility:visible}
+.fstrip.turn{box-shadow:inset 0 0 0 2px var(--good)}
+.frot{width:var(--FB);flex:none;display:flex;align-items:center;justify-content:space-between;gap:.8rem;
+  background:var(--panel);color:var(--soft);border:0;border-radius:.3rem;padding:.5rem .7rem;font-size:.88rem;font-weight:700;text-align:left}
+.frot:active:not(:disabled){transform:none}
+.frot i{flex:none;position:relative;width:2.4rem;height:1.3rem;background:var(--raise);border-radius:.2rem;transition:background .15s}
+.frot i::after{content:"";position:absolute;top:.15rem;left:.15rem;width:1rem;height:1rem;background:#fff;border-radius:.15rem;transition:transform .15s}
+.frot[aria-pressed="true"] i{background:var(--good)}
+.frot[aria-pressed="true"] i::after{transform:translateX(1.1rem)}
+.fmsg{font-size:.85rem;font-weight:700;color:var(--soft);line-height:1.3;min-height:0}
+.fmsg:empty{display:none}
+.fbtns{display:flex;gap:.45rem;flex-wrap:wrap}
+.fbtns button{flex:1 1 0;min-width:4.5rem;padding:.55rem .4rem;font-size:.9rem}
+@media (min-width:56rem),(orientation:landscape) and (max-height:34rem) and (min-width:32rem){
+  #friendsPanel{--FB:max(15rem,min(calc(100vw - var(--rail) - 2*var(--pad) - 1rem),calc(100dvh - 2*var(--pad) - 17rem)))}
+}
 </style>
 </head>
 <body data-tab="play">
@@ -584,6 +613,7 @@ body[data-tab="play"] #pnew{padding:.7rem 1rem;font-size:1.08rem}
 
     <nav class="tabs" aria-label="Sections">
       <button id="tabPlay" class="on" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="6.6" r="3.4"/><path d="M9.2 11h5.6l-.9 4h2.6l1.5 4.6H6.9l1.5-4.6H11z"/><rect x="5.5" y="20" width="13" height="2" rx="1"/></svg><span>Play</span></button>
+      <button id="tabFriends" type="button" title="Play with friends"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8.5" cy="7.5" r="3"/><circle cx="16.5" cy="8.5" r="2.5"/><path d="M2.5 19c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5z"/><path d="M15 13.8c.5-.2 1-.3 1.5-.3 2.8 0 5 1.8 5 4.6V19h-5.2c0-1.9-.5-3.5-1.3-5.2z"/></svg><span>Friends</span></button>
       <button id="tabLearn" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5 1.5 9 12 14.5 22.5 9z"/><path d="M5.5 12.8v4c0 1.5 2.9 3.2 6.5 3.2s6.5-1.7 6.5-3.2v-4L12 16.2z"/><path d="M21 10v6h1.6v-6z"/></svg><span>Learn</span></button>
       <button id="tabReview" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" d="M10.5 3a7.5 7.5 0 0 1 5.9 12.1l4.3 4.3-1.4 1.4-4.3-4.3A7.5 7.5 0 1 1 10.5 3zm0 2a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11z"/><path d="M7.3 13v-2.4h1.6V13zm2.7 0V8h1.6v5zm2.7 0V9.6h1.6V13z"/></svg><span>Review</span></button>
       <button id="tabOpen" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h14.5a.5.5 0 0 1 .5.5V17H6.6A1.6 1.6 0 0 0 5 18.6zM5 20.4c0-.9.7-1.4 1.6-1.4H20v2H6.6c-.9 0-1.6-.2-1.6-.6z"/></svg><span>Openings</span></button>
@@ -682,6 +712,22 @@ body[data-tab="play"] #pnew{padding:.7rem 1rem;font-size:1.08rem}
         </div>
       </div>
     </div>
+  </div>
+
+  <!-- ================= PLAY WITH FRIENDS (same device, players face each other, no engine) ================= -->
+  <div id="friendsPanel" class="hide">
+    <div class="fstrip top" id="fs-b">
+      <div class="fhead"><span class="sw b"></span><input class="fname" id="fnb" type="text" maxlength="20" placeholder="Black" autocomplete="off" aria-label="Black player name"><span class="ftag">to move</span></div>
+      <div class="fmsg" id="fm-b"></div>
+      <div class="fbtns" id="fb-b"></div>
+    </div>
+    <svg id="fboard" class="bd" viewBox="0 0 800 800" role="img" aria-label="Chess board"></svg>
+    <div class="fstrip bot" id="fs-w">
+      <div class="fhead"><span class="sw w"></span><input class="fname" id="fnw" type="text" maxlength="20" placeholder="White" autocomplete="off" aria-label="White player name"><span class="ftag">to move</span></div>
+      <div class="fmsg" id="fm-w"></div>
+      <div class="fbtns" id="fb-w"></div>
+    </div>
+    <button type="button" id="frot" class="frot" role="switch" aria-pressed="false" title="Turn every piece to face whoever is to move. Handy when the phone lies flat between two players."><span>Pieces face the player to move</span><i></i></button>
   </div>
 
   <!-- ================= LEARN ================= -->
@@ -2698,6 +2744,200 @@ $("preview").onclick = () => {
   run();
 };
 
+/* ================= PLAY WITH FRIENDS (face to face, no engine, no hints) =================
+   The device lies flat between two players. White sits at the bottom, Black at the top.
+   Each player has their own controls facing them; Black's side is rotated 180 degrees.
+   The engine is never used here. It only comes in when someone taps Review game. */
+// Pieces turn to face whoever is to move (the board itself never flips). Meant for a phone lying flat
+// between two players, so it defaults on for touch devices and off for PC. The button below changes it.
+let fRot = (() => {
+  try{ const v = localStorage.getItem("fRot"); if(v==="1"||v==="0") return v==="1"; }catch(e){}
+  return !!(window.matchMedia && matchMedia("(pointer:coarse)").matches);
+})();
+const fRotated = () => fRot && fg && fg.turn()==="b";
+let fg = null, fSel = null, fLast = null, fOver = false, fDrag = null, fHide = null, fAnim = null;
+let fPromo = null, fResult = null, fMsg = "", fOffer = null, fArmed = null, fArmT = null;
+const fNames = () => ({w: $("fnw").value.trim() || "White", b: $("fnb").value.trim() || "Black"});
+const fOpp = c => c==="w" ? "b" : "w";
+function fDisarm(){ clearTimeout(fArmT); fArmed = null; }
+function fArm(key){ fDisarm(); fArmed = key; fArmT = setTimeout(() => { fArmed = null; fStrips(); }, 3000); fStrips(); }
+
+function fFace(){
+  if(!fRotated()) return;
+  const urls = new Set(["w","b"].flatMap(c => ["p","n","b","r","q","k"].map(t => PIECE_URL(c, t))));
+  fBoard.querySelectorAll("image").forEach(im => {
+    if(!urls.has(im.getAttribute("href"))) return;
+    const x = +im.getAttribute("x"), y = +im.getAttribute("y");
+    im.setAttribute("transform", `rotate(180 ${x+50} ${y+50})`);
+  });
+}
+function fRotPaint(){
+  const b = $("frot"); if(!b) return;
+  b.setAttribute("aria-pressed", fRot ? "true" : "false");
+  b.setAttribute("aria-checked", fRot ? "true" : "false");
+  $("friendsPanel").classList.toggle("norot", !fRot); // off: Black's name and buttons read upright too
+}
+function fRender(boardOnly){
+  if(!fg) return;
+  const dots = (fSel && !fOver && !fPromo) ? fg.moves({square:fSel, verbose:true}) : [];
+  drawBoard(fBoard, fg.fen(), [], fLast ? [fLast.from, fLast.to] : [], {flip:false, sel:fSel, dots, hideSq:fHide, anim:fAnim});
+  fAnim = null; fFace(); fRotPaint();
+  if(!boardOnly) fStrips();
+}
+function fBtn(act, label, cls){
+  const armed = fArmed===act;
+  return `<button type="button" data-act="${act}"${cls||armed ? ` class="${armed ? "primary" : cls}"` : ""}>${armed ? "Tap again" : label}</button>`;
+}
+function fStrips(){
+  if(!fg) return;
+  const n = fNames(), mover = fOver ? null : fg.turn();
+  ["w","b"].forEach(c => {
+    const el = $("fs-" + c), me = n[c], opp = n[fOpp(c)];
+    el.classList.toggle("turn", mover===c);
+    let msg = "", btns = "";
+    if(fOver){
+      msg = fMsg;
+      btns = (fg.history().length ? fBtn("review", "Review game", "primary") : "") + fBtn("new", "New game");
+    } else if(fPromo && fg.turn()===c){
+      msg = "Promote to:";
+      btns = fBtn("p:q","Queen") + fBtn("p:r","Rook") + fBtn("p:b","Bishop") + fBtn("p:n","Knight") + fBtn("p:x","Cancel","ghost");
+    } else if(fOffer===fOpp(c)){
+      msg = opp + " offers a draw.";
+      btns = fBtn("accept","Accept","primary") + fBtn("decline","Decline");
+    } else if(fOffer===c){
+      msg = "Draw offer sent.";
+      btns = fBtn("cancel","Cancel offer");
+    } else {
+      if(mover===c && fg.in_check()) msg = "You are in check.";
+      btns = fBtn("offer","Offer draw") + fBtn("resign","Resign");
+    }
+    $("fm-" + c).textContent = msg;
+    $("fb-" + c).innerHTML = btns;
+  });
+}
+function fStart(){
+  fDisarm();
+  fg = new Chess(); fSel = null; fLast = null; fOver = false; fHide = null; fAnim = null;
+  fPromo = null; fResult = null; fMsg = ""; fOffer = null; fDrag = null; rc = null;
+  snd("start"); fRender();
+}
+function fEnd(res, msg, kind){
+  fDisarm();
+  fOver = true; fResult = res; fSel = null; fPromo = null; fOffer = null; fMsg = msg;
+  try{ const n = fNames(); fg.header("Event", "Friendly game", "White", n.w, "Black", n.b, "Result", res); }catch(e){}
+  fRender();
+  setTimeout(() => snd(kind), 350);
+}
+function fCheckEnd(){
+  const n = fNames();
+  if(fg.in_checkmate()){ const w = fOpp(fg.turn()); fEnd(w==="w" ? "1-0" : "0-1", "Checkmate. " + n[w] + " wins.", "end"); return true; }
+  if(fg.game_over()){
+    const why = fg.in_stalemate() ? "Stalemate." : fg.insufficient_material() ? "Draw by insufficient material." : fg.in_threefold_repetition() ? "Draw by repetition." : "Draw.";
+    fEnd("1/2-1/2", why + " It's a draw.", "draw"); return true;
+  }
+  return false;
+}
+function fPlay(from, to, promo, animate){
+  const m = fg.move({from, to, promotion: promo || "q"});
+  if(!m) return;
+  fLast = m; fSel = null; fPromo = null; fOffer = null; fDisarm();
+  fAnim = animate ? {from:m.from, to:m.to} : null;
+  snd(sndKind(m, true));
+  if(fCheckEnd()) return;
+  fRender();
+}
+function fTry(from, to, animate){
+  const mv = fg.moves({square:from, verbose:true}).filter(m => m.to===to);
+  if(!mv.length) return;
+  if(mv[0].promotion){ fPromo = {from, to, animate}; fSel = null; fRender(); return; }
+  fPlay(from, to, null, animate);
+}
+
+/* board input: tap-tap or drag, for whoever is to move */
+const fBoard = $("fboard");
+function fEndDrag(){
+  const gh = fBoard.querySelector("#fghost"); if(gh) gh.remove();
+  fDrag = null; rc = null; fHide = null;
+}
+function fGhost(gh, pt, color){
+  gh.setAttribute("x", pt.x-65); gh.setAttribute("y", pt.y-65);
+  if(fRotated()) gh.setAttribute("transform", `rotate(180 ${pt.x} ${pt.y})`);
+}
+fBoard.addEventListener("pointerdown", e => {
+  if(e.button!==0 || !fg || fOver || fPromo) return;
+  const s = sqAt(fBoard, e, false); if(!s) return;
+  e.preventDefault();
+  if(fSel && fSel!==s && fg.moves({square:fSel, verbose:true}).some(m => m.to===s)){ fTry(fSel, s, true); return; }
+  const p = fg.get(s);
+  if(p && p.color===fg.turn()){
+    fDrag = {from:s, wasSel:fSel===s, color:p.color};
+    rc = {svg:fBoard, r:fBoard.getBoundingClientRect()};
+    fSel = s; fHide = s; fRender(true);
+    const gh = document.createElementNS(NS, "image");
+    gh.setAttribute("id", "fghost"); gh.setAttribute("href", PIECE_URL(p.color, p.type));
+    gh.setAttribute("width", 130); gh.setAttribute("height", 130);
+    gh.style.pointerEvents = "none";
+    fGhost(gh, svgPt(fBoard, e), p.color);
+    fBoard.appendChild(gh);
+    try{ fBoard.setPointerCapture(e.pointerId); }catch(err){}
+  } else { fSel = null; fRender(true); }
+});
+fBoard.addEventListener("pointermove", e => {
+  if(!fDrag) return;
+  const gh = fBoard.querySelector("#fghost");
+  if(gh) fGhost(gh, svgPt(fBoard, e), fDrag.color);
+});
+function fDropEnd(e, cancel){
+  if(!fDrag) return;
+  const d = fDrag, t = cancel ? null : sqAt(fBoard, e, false);
+  fEndDrag();
+  const legal = t && t!==d.from && fg.moves({square:d.from, verbose:true}).some(m => m.to===t);
+  if(legal){ fTry(d.from, t, false); return; }
+  if(d.wasSel && t===d.from) fSel = null;
+  fRender(true);
+}
+fBoard.addEventListener("pointerup", e => { if(e.button===0) fDropEnd(e, false); });
+fBoard.addEventListener("pointercancel", e => fDropEnd(e, true));
+
+/* each player's buttons */
+function fAct(c, act){
+  if(!fg) return;
+  const n = fNames();
+  if(act.startsWith("p:")){
+    if(!fPromo) return;
+    const pr = fPromo, k = act.slice(2);
+    if(k==="x"){ fPromo = null; fSel = null; fRender(); return; }
+    fPlay(pr.from, pr.to, k, pr.animate); return;
+  }
+  if(act==="review"){
+    if(!fOver) return;
+    $("pgn").value = fg.pgn();
+    $("side").value = "wb";
+    showTab("review"); run(); return;
+  }
+  if(act==="new"){ fStart(); return; }
+  if(fOver) return;
+  if(act==="resign"){
+    if(fArmed!==c+act){ fArm(c+act); return; }
+    fEnd(c==="w" ? "0-1" : "1-0", n[c] + " resigned. " + n[fOpp(c)] + " wins.", "end"); return;
+  }
+  if(act==="offer"){ fDisarm(); fOffer = c; fStrips(); return; }
+  if(act==="cancel" || act==="decline"){ fOffer = null; fStrips(); return; }
+  if(act==="accept"){ fEnd("1/2-1/2", "Draw agreed.", "draw"); return; }
+}
+$("frot").addEventListener("click", () => {
+  fRot = !fRot;
+  try{ localStorage.setItem("fRot", fRot ? "1" : "0"); }catch(e){}
+  fRotPaint(); if(fg) fRender(true);
+});
+fRotPaint();
+["w","b"].forEach(c => {
+  $("fb-" + c).addEventListener("click", e => {
+    const b = e.target.closest("button[data-act]"); if(b) fAct(c, b.dataset.act);
+  });
+  $("fn" + c).addEventListener("input", () => { if(fg) fStrips(); });
+});
+
 /* ================= REVIEW MODE ================= */
 let moves = [], pos = [], review = [], sel = 1, running = 0, rflip = false, reviewAnim = null;
 let chipEls = [], selChip = null, graphKey = null;
@@ -4310,11 +4550,14 @@ tBadge();
 function showTab(t){
   document.body.dataset.tab = t;
   $("playPanel").classList.toggle("hide", t!=="play");
+  $("friendsPanel").classList.toggle("hide", t!=="friends");
   $("learnPanel").classList.toggle("hide", t!=="learn");
   $("reviewPanel").classList.toggle("hide", t!=="review");
   $("openPanel").classList.toggle("hide", t!=="open");
   $("enginePanel").classList.toggle("hide", t!=="engine");
   $("tabPlay").classList.toggle("on", t==="play");
+  $("tabFriends").classList.toggle("on", t==="friends");
+  if(t==="friends"){ if(!fg) fStart(); else fRender(); }
   $("tabLearn").classList.toggle("on", t==="learn");
   $("tabReview").classList.toggle("on", t==="review");
   $("tabOpen").classList.toggle("on", t==="open");
@@ -4326,6 +4569,7 @@ function showTab(t){
   if(t==="review" && engineReady) for(let i=0;i<maxW();i++) getWorker(i); // warm up helper workers
 }
 $("tabPlay").onclick = () => showTab("play");
+$("tabFriends").onclick = () => showTab("friends");
 $("tabLearn").onclick = () => showTab("learn");
 $("tabReview").onclick = () => showTab("review");
 $("tabOpen").onclick = () => showTab("open");
