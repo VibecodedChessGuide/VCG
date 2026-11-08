@@ -299,10 +299,25 @@ body.cssfs .tabs+*{}
 .lprog i{display:block;height:100%;width:0;background:var(--good);transition:width .15s}
 #tprog{display:block}
 #lstatus{min-height:calc(2*1.45*.9rem);margin-top:.3rem}
-#lstatus.good,#tstatus.good{color:var(--good)}
-#lstatus.bad,#tstatus.bad{color:var(--bad)}
+#lstatus.good,#tstatus.good,#mstatus.good{color:var(--good)}
+#lstatus.bad,#tstatus.bad,#mstatus.bad{color:var(--bad)}
 #tstatus.warn{color:var(--warn)}
 .lseed{width:7rem}
+
+/* ---------- MEMORIZATION ---------- */
+#mboard{touch-action:manipulation;cursor:pointer}
+.mtimer{font:800 1.05rem/1 "Segoe UI",system-ui,sans-serif;letter-spacing:.08em;color:var(--muted);margin:.1rem 0 .55rem}
+.mcue{font:800 1.08rem/1.4 "Segoe UI",system-ui,sans-serif;text-align:center;padding:.75rem .6rem;border-radius:.7rem;
+  background:var(--deep);border:1px solid var(--line);min-height:3.6rem;display:flex;flex-direction:column;justify-content:center;gap:.2rem}
+.mcue.big{font-size:2.9rem;letter-spacing:.12em;line-height:1.1;min-height:5.2rem}
+.mcue small{display:block;font-size:.8rem;font-weight:700;letter-spacing:.02em;color:var(--muted)}
+.mstats{display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;margin:.7rem 0}
+.mstat{background:var(--deep);border-radius:.6rem;padding:.5rem .35rem;text-align:center}
+.mstat strong{display:block;font:800 1.15rem/1.2 "Segoe UI",system-ui,sans-serif}
+.mstat small{display:block;color:var(--muted);font-size:.72rem;font-weight:600;margin-top:.15rem}
+.mrating{font:800 3rem/1 "Segoe UI",system-ui,sans-serif;text-align:center;margin:.7rem 0 .2rem}
+.mrating small{display:block;font-size:.85rem;color:var(--muted);font-weight:700;margin-top:.35rem}
+#mresult h2{margin-bottom:.2rem}
 .seg{display:flex;gap:.2rem;margin-bottom:var(--gap);padding:.25rem;background:var(--panel);border-radius:.7rem;max-width:22rem}
 .seg button{flex:1;background:none;border:0;border-radius:.5rem;color:var(--muted);padding:.55rem .8rem}
 .seg button:active:not(:disabled){transform:none}
@@ -499,7 +514,7 @@ body[data-tab="play"] #pnew{padding:.7rem 1rem;font-size:1.08rem}
   /* LEARN puzzle / trainer: board left, controls right */
   .pz{display:grid;grid-template-columns:minmax(0,min(36rem,calc(100dvh - 11rem))) minmax(15rem,1fr);gap:1.3rem;align-items:start}
   .pz .lwrap{width:100%;margin:0}
-  #learnPanel:has(#lpuz:not(.hide)),#openPanel:has(#tdrill:not(.hide)){max-width:64rem}
+  #learnPanel:has(#lpuz:not(.hide)),#openPanel:has(#tdrill:not(.hide)),#learnPanel:has(#msession:not(.hide)){max-width:64rem}
   #learnPanel:has(#lhome:not(.hide)){max-width:44rem}
   #llist{grid-template-columns:repeat(auto-fill,minmax(18rem,1fr))}
   #llist .lcat{grid-column:1/-1}

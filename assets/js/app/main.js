@@ -16,7 +16,7 @@ function showTab(t){
   $("tabOpen").classList.toggle("on", t==="open");
   $("tabEngine").classList.toggle("on", t==="engine");
   $("tabDetect").classList.toggle("on", t==="detect");
-  if(t!=="learn"){ learnToken++; if(LP===null && !$("lpuz").classList.contains("hide")) lHome(); } // leaving Learn cancels any puzzle being built
+  if(t!=="learn"){ learnToken++; if(typeof memStop==="function") memStop(); if(LP===null && !$("lpuz").classList.contains("hide")) lHome(); } // leaving Learn cancels any puzzle being built or memorization drill
   if(t==="learn"){ lLoadPack(); if(!engineReady) startEngine(engineGen); if(!LP && !$("lpuz").classList.contains("hide")) lHome(); lDraw(); }
   if(t==="open") renderOpenList();
   if(t==="engine" && !engineReady) startEngine(engineGen);

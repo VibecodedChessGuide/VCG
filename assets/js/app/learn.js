@@ -306,6 +306,7 @@ function lRenderList(){
     const n = c ? (c.e + c.m + c.h) : 0;
     h += `<button class="botrow" data-t="${t.id}"><span class="bname">${t.name}</span><small class="bsub">${t.desc}${n ? " · " + n.toLocaleString() + " real puzzles" : ""}</small></button>`;
   });
+  h += `<div class="lcat">Memory</div><button class="botrow" data-mem="1"><span class="bname">Memorization</span><small class="bsub">Coordinates, then hard moves from real games, against a 5-minute clock.</small></button>`;
   $("llist").innerHTML = h;
   $("lsrcrow").classList.toggle("hide", !LPACK);
   $("lpacknote").textContent = LPACK
@@ -645,7 +646,11 @@ function lDropEnd(e, cancel){
 lb.addEventListener("pointerup", e => { if(e.button===0) lDropEnd(e, false); });
 lb.addEventListener("pointercancel", e => lDropEnd(e, true));
 
-$("llist").onclick = e => { const b = e.target.closest(".botrow"); if(b) lOpen(b.dataset.t); };
+$("llist").onclick = e => {
+  const b = e.target.closest(".botrow"); if(!b) return;
+  if(b.dataset.mem){ if(typeof memOpen==="function") memOpen(); return; }
+  lOpen(b.dataset.t);
+};
 $("lback").onclick = lHome;
 $("lhint").onclick = lHint;
 $("lsol").onclick = lSolution;

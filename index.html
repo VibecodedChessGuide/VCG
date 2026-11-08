@@ -20,6 +20,7 @@
     review-links.js   chess.com link loader + compressed share links
     look.js           board + piece set selection
     learn.js          Learn: seeded engine puzzles
+    memory.js         Memorization: coordinates + move recall drills
     trainer.js        opening trainer (repertoire drills)
     detector.js       DETECTOR: engine match + sudden-jump flags
     main.js           tab switching + boot
@@ -224,6 +225,44 @@
           <div class="tip">The seed and difficulty decide which game Stockfish plays. The same pair usually builds the same puzzle. Difficulty applies to the next puzzle.</div>
         </div>
       </div>
+    </div>
+    <div class="card hide" id="lmem">
+      <div class="phead"><button id="mback" type="button">&larr; Lessons</button><b>Memorization</b></div>
+      <div id="msetup">
+        <div class="seg" id="mmode">
+          <button id="mmSquares" class="on" type="button" aria-pressed="true">Squares</button>
+          <button id="mmMoves" type="button" aria-pressed="false">Moves</button>
+        </div>
+        <div class="row">
+          <select id="mlevel" class="lsel" aria-label="Difficulty">
+            <option value="easy">Easy</option>
+            <option value="medium">Medium</option>
+            <option value="hard" selected>Hard</option>
+          </select>
+          <button id="mstart" class="primary" type="button">Start 5-minute drill</button>
+        </div>
+        <p class="tip" id="mtip"></p>
+      </div>
+      <div id="msession" class="hide">
+        <div class="pz">
+          <div class="pz-board">
+            <div class="lwrap" id="mwrap"><svg id="mboard" class="bd" viewBox="0 0 800 800" role="img" aria-label="Memorization board"></svg></div>
+          </div>
+          <div class="pz-side">
+            <div class="lmeta" id="mmeta"></div>
+            <div class="mtimer" id="mtimer">5:00</div>
+            <div class="mcue big" id="mcue" aria-live="polite">-</div>
+            <div class="status" id="mstatus" aria-live="polite"></div>
+            <div class="mstats">
+              <div class="mstat"><strong id="mhits">0</strong><small>Solved</small></div>
+              <div class="mstat"><strong id="mmisses">0</strong><small>Failures</small></div>
+              <div class="mstat"><strong id="mavg">-</strong><small>Avg time</small></div>
+            </div>
+            <div class="row"><button id="mstop" class="ghost" type="button">Stop drill</button></div>
+          </div>
+        </div>
+      </div>
+      <div id="mresult" class="hide"></div>
     </div>
   </div>
 
@@ -485,6 +524,7 @@
 <script src="assets/js/app/review-links.js"></script>
 <script src="assets/js/app/look.js"></script>
 <script src="assets/js/app/learn.js"></script>
+<script src="assets/js/app/memory.js"></script>
 <script src="assets/js/app/trainer.js"></script>
 <script src="assets/js/app/detector.js"></script>
 <script src="assets/js/app/main.js"></script>
