@@ -391,7 +391,7 @@ async function runGame(){
   if(!engineReady){ $("status").textContent = "Stockfish is not ready yet."; return; }
   const text = $("pgn").value.trim();
   const g = new Chess();
-  if(!text || !g.load_pgn(text, {sloppy:true})){ $("status").textContent = "That PGN could not be read. Check the moves and try again."; return; }
+  if(!text || !g.load_pgn(fixPgnFen(text), {sloppy:true})){ $("status").textContent = "That PGN could not be read. Check the moves and try again."; return; }
   const list = g.history({verbose:true});
   if(!list.length){ $("status").textContent = "No moves found in that PGN."; return; }
 
@@ -472,7 +472,7 @@ function parsePgnGames(text){
     });
     headers = []; moves = [];
   };
-  for(const raw of String(text).replace(/^\uFEFF/,"").split(/\r?\n/)){
+  for(const raw of fixPgnFen(String(text).replace(/^\uFEFF/,"")).split(/\r?\n/)){
     const line = raw.trim();
     if(!line) continue;
     if(line[0] === "["){

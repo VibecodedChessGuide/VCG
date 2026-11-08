@@ -375,6 +375,21 @@ body.cssfs .tabs+*{}
 .dwhy{font-size:.86rem;line-height:1.45;padding:.5rem .7rem;border-radius:.5rem;background:rgba(250,65,45,.1);border-left:4px solid var(--bad)}
 .dwhy.jump{background:rgba(247,165,49,.12);border-left-color:var(--warn)}
 .dwhy p+p{margin-top:.3rem}
+.dfp{display:grid;gap:.45rem;padding:.6rem .7rem;border-radius:.6rem;background:var(--deep);border-left:4px solid var(--line)}
+.dfp.strong{border-left-color:var(--bad)}
+.dfp.moderate{border-left-color:var(--warn)}
+.dfphead{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
+.dfphead b{font-size:.9rem}
+.dfpbadge{margin-left:auto;font-size:.72rem;font-weight:800;padding:.2rem .55rem;border-radius:2rem;background:var(--raise);color:var(--muted);white-space:nowrap}
+.dfpbadge.strong{background:var(--bad);color:#fff}
+.dfpbadge.mid{background:var(--warn);color:#241505}
+.dfpstats{grid-template-columns:repeat(auto-fit,minmax(7rem,1fr))}
+.dfp .dstat{background:var(--raise)}
+.dfpchks{display:flex;flex-wrap:wrap;gap:.3rem}
+.dfpchk{font-size:.72rem;font-weight:700;padding:.16rem .45rem;border-radius:.35rem;background:var(--raise);color:var(--muted)}
+.dfpchk.ok{background:rgba(129,182,76,.2);color:var(--good);border:1px solid var(--goodb)}
+.dfpchk.no{background:rgba(250,65,45,.12);color:var(--bad);border:1px solid rgba(250,65,45,.35)}
+.dfp .dnote{margin:0}
 
 .dmoves{display:flex;flex-wrap:wrap;gap:.25rem}
 .dm{font-size:.78rem;font-weight:700;padding:.15rem .4rem;border-radius:.35rem;background:var(--deep);color:var(--muted);border:1px solid var(--line)}
@@ -382,6 +397,9 @@ body.cssfs .tabs+*{}
 .dm.t3{background:rgba(106,166,230,.2);color:var(--ink);border-color:var(--blue)}
 .dm.sk{opacity:.5;border-style:dashed}
 .dm.bad{box-shadow:inset 0 -3px 0 var(--bad)}
+button.dm{border-bottom-width:1px}
+button.dm:active:not(:disabled){transform:none;border-bottom-width:1px}
+.dmd{font-size:.78rem;line-height:1.4;padding:.4rem .55rem;border-radius:.4rem;background:var(--raise);color:var(--soft)}
 .dlegend{display:flex;flex-wrap:wrap;gap:.3rem .9rem;font-size:.74rem;color:var(--muted)}
 .dlegend i{display:inline-block;width:.7rem;height:.7rem;border-radius:.2rem;margin-right:.3rem;vertical-align:-1px;border:1px solid var(--line);background:var(--deep)}
 .dlegend i.t1{background:rgba(129,182,76,.5);border-color:var(--goodb)}

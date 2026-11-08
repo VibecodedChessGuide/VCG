@@ -9,6 +9,22 @@ function uciToMove(g, u){
   if(!u) return null;
   return g.move({from:u.slice(0,2), to:u.slice(2,4), promotion:u[4]||undefined});
 }
+// Test PGNs often arrive as one long line with a 4-field FEN and no SetUp header.
+// Put each header on its own line, pad the FEN, and add SetUp so chess.js can load it.
+function fixPgnFen(text){
+  let s = String(text).replace(/^\uFEFF/, "");
+  s = s.replace(/([^\n])(?=\[[A-Za-z0-9_]+\s+")/g, "$1\n");
+  s = s.replace(/(\[[A-Za-z0-9_]+\s+"[^"]*"\])(?=\s*[^\[\s])/g, "$1\n\n");
+  s = s.replace(/[ \t]+$/gm, "");
+  s = s.replace(/\[FEN\s+"([^"]*)"\]/gi, (all, fen) => {
+    const p = fen.trim().split(/\s+/);
+    if(p.length === 4) p.push("0", "1");
+    else if(p.length === 5) p.push("1");
+    return `[FEN "${p.join(" ")}"]`;
+  });
+  s = s.replace(/^[ \t]*\[SetUp\s+"[^"]*"\][ \t]*\r?\n?/gmi, "");
+  return s.replace(/(\[FEN\s+"[^"]*"\])/gi, '$1\n[SetUp "1"]');
+}
 function pvToSan(fen, pv, n=6){
   const g = new Chess(fen), out = [];
   for(const u of pv.slice(0,n)){ const m = uciToMove(g,u); if(!m) break; out.push(m.san); }

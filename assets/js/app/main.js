@@ -104,7 +104,7 @@ idle(loadOpenings);
   if(["8","10","13"].includes(String(depth))) $("depth").value = String(depth);
   showTab("review");
   const probe = new Chess();
-  if(!probe.load_pgn(text, {sloppy:true}) || !probe.history().length){
+  if(!probe.load_pgn(fixPgnFen(text), {sloppy:true}) || !probe.history().length){
     $("status").textContent = "The shared link doesn't contain a readable game. Paste a PGN or a chess.com link below.";
     return;
   }

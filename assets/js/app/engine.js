@@ -3,7 +3,13 @@
 // used for parallel game review and for computing the engine's reply while the analysis checks your move.
 const BIG_BUILD = 50e6; // engines above this size are heavy: cap parallel copies and start helpers lazily
 let auxOff = false; // set after a worker dies (usually out of memory): stay on a single engine copy
-const maxW = () => auxOff ? 1 : Math.max(1, Math.min(BOT().size > BIG_BUILD ? 2 : 4, (navigator.hardwareConcurrency || 2) - 1, (navigator.deviceMemory || 4) < 4 ? 2 : 4));
+// Phones and low-memory devices can't hold two copies of a ~100 MB engine, so there the standby is a tiny Lite build.
+const FORCE_FULL_STANDBY = false; // set true to always use a full-size standby
+const IS_MOBILE = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || "") || (navigator.maxTouchPoints > 1 && /Mac/i.test(navigator.platform || ""));
+const LOW_RAM = !FORCE_FULL_STANDBY && (IS_MOBILE || (navigator.deviceMemory && navigator.deviceMemory < 8));
+const liteStandby = () => LOW_RAM && BOT().size > BIG_BUILD;
+const standbyBuild = () => liteStandby() ? (BOTS.find(b => b.id === "sf19ls") || BOTS.find(b => b.size <= BIG_BUILD) || BOT()) : BOT();
+const maxW = () => auxOff || liteStandby() ? 1 : Math.max(1, Math.min(BOT().size > BIG_BUILD ? 2 : 4, (navigator.hardwareConcurrency || 2) - 1, (navigator.deviceMemory || 4) < 4 ? 2 : 4));
 const workerP = [], cache = new Map();
 let engineGen = 0, engineNote = "";
 const booting = new Set();
@@ -66,15 +72,15 @@ function bootWorker(url, onProgress, prog){
     w.onmessage = e => {
       if(!String(e.data).includes("uciok")) return;
       const wk = {w, chain:Promise.resolve(), skill:null, dead:false, abort:null};
-      w.onerror = w.onmessageerror = () => { wk.dead = true; if(wk.abort) wk.abort(); };
+      w.onerror = w.onmessageerror = () => { wk.crashed = true; wk.dead = true; console.warn("[engine] worker crashed"); if(wk.abort) wk.abort(); };
       finish(() => res(wk));
     };
     w.onerror = err => { try{ w.terminate(); }catch(e){} finish(() => rej(err)); };
     w.postMessage("uci");
   });
 }
-async function newWorker(onProgress){
-  const b = BOT(), url = botUrl(b);
+async function newWorker(onProgress, bot){
+  const b = bot || BOT(), url = botUrl(b);
   if(onProgress) engineProgressReset(!!b.prog);
   try{ return await bootWorker(url, onProgress, !!b.prog); }
   catch(e){
@@ -113,7 +119,7 @@ function renderBots(){
 async function selectBot(id){
   const b = BOTS.find(x => x.id === id);
   if(!b || (id === botId && engineReady)) return;
-  botId = id; engineNote = ""; auxOff = false; gameId++;
+  botId = id; engineNote = ""; auxOff = false; respawnFails = 0; gameId++;
   renderBots();
   $("esel").textContent = "Selected engine: " + b.name;
   $("plevel").value = b.level;
@@ -129,19 +135,61 @@ async function selectBot(id){
 $("plevel").onchange = () => { BOT().level = $("plevel").value; };
 
 function bootAux(gen){
-  if(auxOff || maxW() < 2 || aux) return;
-  idle(() => getWorker(1).then(w => {
-    if(!w) return;
-    if(gen === engineGen) aux = w;
-    else { try{ w.w.terminate(); }catch(e){} }
-  }));
+  if(auxOff || aux) return;
+  idle(() => respawnBackup(gen));
+}
+// ---- Hot standby: two engines. If one dies, the other takes over at once and a replacement is started in the background. ----
+let respawnFails = 0;
+function respawnBackup(gen){
+  if(gen !== engineGen || auxOff || aux) return;
+  if(workerP[1]){ workerP[1].then(w => { if(w && !w.dead && gen === engineGen && !aux) aux = w; }); return; }
+  const sb = standbyBuild();
+  const p = newWorker(null, sb).then(w => {
+    if(gen !== engineGen){ try{ w.w.terminate(); }catch(e){} return null; }
+    w.lite = sb !== BOT();
+    aux = w; respawnFails = 0; return w;
+  }).catch(() => {
+    if(gen === engineGen){
+      console.warn("[engine] standby failed to start (" + (respawnFails+1) + "/3)");
+      if(++respawnFails >= 3) auxOff = true; else setTimeout(() => respawnBackup(gen), 3000);
+    }
+    return null;
+  }).then(w => { if(!w && workerP[1] === p) workerP[1] = undefined; return w; });
+  workerP[1] = p;
+}
+// Swap in the standby when `dead` has stopped. Returns the live worker to continue on, or null if none is left.
+function failover(dead){
+  const alive = () => (main && !main.dead) ? main : null;
+  if(!dead) return alive();
+  const gen = engineGen;
+  if(dead === main){
+    if(!(aux && !aux.dead)) return null;
+    try{ main.w.terminate(); }catch(e){}
+    console.warn("[engine] main engine died: standby promoted, starting a new standby");
+    main = aux; aux = null;
+    workerP[0] = Promise.resolve(main); workerP[1] = undefined;
+    if(main.lite) $("esstatus").textContent = "Running on the backup engine (" + standbyBuild().name + "). Reload to get the full engine back.";
+    respawnBackup(gen);
+    return main;
+  }
+  if(dead === aux){
+    try{ aux.w.terminate(); }catch(e){}
+    console.warn("[engine] standby died: restarting it");
+    aux = null; workerP[1] = undefined;
+    respawnBackup(gen);
+  }
+  return alive();
 }
 let recovering = null;
 function recoverEngine(){
   if(recovering) return recovering;
+  // a healthy engine is still around: swap it in and restart the dead one in the background (no interruption)
+  if(main && main.dead){ if(failover(main)) return Promise.resolve(); }
+  else if(main){ if(aux && aux.dead) failover(aux); return Promise.resolve(); }
+  if(recovering) return recovering;
   const msg = "The engine stopped responding. Restarting it…";
   $("pstatus").textContent = msg; $("status").textContent = msg; $("esstatus").textContent = msg;
-  auxOff = true;
+  if((main && main.crashed) || (aux && aux.crashed)) auxOff = true; // only a real crash (usually out of memory) disables helpers
   stopEngine();
   recovering = startEngine(engineGen).finally(() => { recovering = null; });
   return recovering;
@@ -160,7 +208,7 @@ async function startEngine(gen){
     $("pstatus").textContent = done + ". Pick a side and start.";
     $("pnew").disabled = false;
     if(!$("dresults") || $("dresults").classList.contains("hide")) $("dstatus").textContent = done + ". Paste a game and tap Run detector.";
-    if(BOT().size <= BIG_BUILD) bootAux(gen); // big builds wait until a game or review actually needs a helper
+    bootAux(gen); // always keep a second engine ready as a hot standby
   }catch(e){
     if(gen !== engineGen) return;
     engineProgressHide();
@@ -173,25 +221,33 @@ async function startEngine(gen){
 // Every search goes through runSearch and can never wait forever. After a soft timeout it asks the
 // engine to stop (which returns the best move found so far). If the engine still stays silent, the
 // worker is marked dead and the job resolves null, so callers can restart the engine instead of hanging.
-const SEARCH_BASE_MS = 20000, SEARCH_PER_DEPTH_MS = 2500, STOP_GRACE_MS = 3000, STALL_MS = 8000;
+const SEARCH_BASE_MS = 20000, SEARCH_PER_DEPTH_MS = 2500, STOP_GRACE_MS = 8000, STALL_MS = 15000, FIRST_STALL_MS = 45000;
 function runSearch(wk, fen, depth, skill, onInfo){
+  if(!wk || wk.dead) return Promise.resolve(null);
+  const p = (wk.lock || Promise.resolve()).then(() => runSearchRaw(wk, fen, depth, skill, onInfo));
+  wk.lock = p.catch(() => {});
+  return p;
+}
+function runSearchRaw(wk, fen, depth, skill, onInfo){
   return new Promise(resolve => {
     if(!wk || wk.dead) return resolve(null);
     let done = false, t = 0, st = 0, stopped = false;
+    const t0 = Date.now();
+    const kill = why => { console.warn("[engine] worker declared dead (" + why + ") after " + (Date.now()-t0) + "ms, depth " + depth + ", first=" + !wk.warm); wk.dead = true; finish(null); };
     const finish = v => { if(done) return; done = true; clearTimeout(t); clearTimeout(st); if(wk.abort === abort) wk.abort = null; resolve(v); };
     const abort = () => { wk.dead = true; finish(null); };
     const askStop = () => {
       if(stopped) return; stopped = true;
       try{ wk.w.postMessage("stop"); }catch(err){}
       clearTimeout(t);
-      t = setTimeout(() => { wk.dead = true; finish(null); }, STOP_GRACE_MS);
+      t = setTimeout(() => kill("no bestmove after stop"), STOP_GRACE_MS);
     };
     // stall watchdog: any output from the engine resets it; silence means the worker is stuck or was killed
-    const arm = () => { clearTimeout(st); if(!stopped) st = setTimeout(askStop, STALL_MS); };
+    const arm = () => { clearTimeout(st); if(!stopped) st = setTimeout(() => { console.warn("[engine] stall: no output"); askStop(); }, wk.warm ? STALL_MS : FIRST_STALL_MS); };
     wk.abort = abort;
     wk.w.onmessage = e => {
       const l = String(e.data);
-      if(l.startsWith("bestmove")) finish({best:l.split(/\s+/)[1]});
+      if(l.startsWith("bestmove")){ wk.warm = true; finish({best:l.split(/\s+/)[1]}); }
       else { arm(); if(onInfo) onInfo(l); }
     };
     t = setTimeout(askStop, SEARCH_BASE_MS + depth * SEARCH_PER_DEPTH_MS);
@@ -225,7 +281,7 @@ function analyze(fen, depth, wk){
       pv = l.split(" pv ")[1].trim().split(/\s+/);
     }
   }).then(res => {
-    if(!res) return null;
+    if(!res){ const alt = failover(wk); return alt ? onW(alt, () => analyze(fen, depth, alt)) : null; } // same position again on the standby
     const best = res.best;
     if(!pv.length && best && best!=="(none)") pv = [best];
     const r = {fen, cp, mate, best: (!best || best==="(none)") ? null : best, pv};
@@ -236,7 +292,9 @@ function analyze(fen, depth, wk){
 }
 // resolves the best move in UCI form, or null when the engine stopped responding
 async function engineSearch(fen, skill, depth, wk){
-  const r = await runSearch(wk || main, fen, depth, skill);
+  wk = wk || main;
+  let r = await runSearch(wk, fen, depth, skill);
+  if(!r){ const alt = failover(wk); if(alt) r = await onW(alt, () => runSearch(alt, fen, depth, skill)); }
   return r ? r.best : null;
 }
 

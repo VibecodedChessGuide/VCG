@@ -35,7 +35,7 @@ const PGN_KEEP = ["Event","Site","Date","White","Black","Result","WhiteElo","Bla
 function compactPgn(text){
   try{
     const g = new Chess();
-    if(!g.load_pgn(text, {sloppy:true})) return text.trim();
+    if(!g.load_pgn(fixPgnFen(text), {sloppy:true})) return text.trim();
     const h = g.header(), out = new Chess(h.FEN || undefined);
     for(const san of g.history()) if(!out.move(san, {sloppy:true})) return text.trim();
     PGN_KEEP.forEach(k => { if(h[k]) out.header(k, h[k]); });

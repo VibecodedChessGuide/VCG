@@ -379,8 +379,8 @@
         <button id="dedit" class="ghost hide" type="button">Edit</button>
       </div>
       <div id="dform">
-        <p class="tip" style="margin:.4rem 0 .2rem">Compares every move a player made with Stockfish's top 3. A first-choice match rate of 75% or more is marked <b>Needs investigation</b>. So are engine-like precision (top-3 match, almost no centipawn loss, no mistakes), play far above the listed rating, and a sudden jump in engine-move accuracy. Paste one game, or several games by the same player to also catch a jump between games.</p>
-        <textarea id="dpgn" placeholder="Paste a PGN here (one game, or many games by the same player)…" spellcheck="false"></textarea>
+        <p class="tip" style="margin:.4rem 0 .2rem">Compares every move a player made with Stockfish's top 3. A first-choice match rate of 75% or more is marked <b>Needs investigation</b>. So are engine-like precision (top-3 match, almost no centipawn loss, no mistakes) and a sudden jump in engine-move accuracy. Because top-3 matching alone is not proof, each game also gets a <b>motif fingerprint</b>: how often the player finds the engine's quiet moves, how often they match in complex positions, and how long their perfect streaks are. Tap a move to see the engine's top 3 and the motif behind it. Paste <b>more than 5 games</b> by the same player (as White or Black) so the result has enough data and jumps between games can be caught; enter their name to focus on them.</p>
+        <textarea id="dpgn" placeholder="Paste a PGN here (more than 5 games by the same player)…" spellcheck="false"></textarea>
         <div class="rctl">
           <input id="dplayer" type="text" placeholder="Player name (optional)" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Player name">
           <select id="dside" aria-label="Which side">

@@ -2,6 +2,7 @@
 const DET = {
   INVESTIGATE: 0.75,   // first-choice match rate at or above this needs investigation
   MIN_MOVES: 8,        // fewer counted moves than this is too small a sample
+  MIN_GAMES: 6,        // fewer games than this for one player is too small a sample
   WIN: 10,             // max rolling window (counted moves) for in-game jump detection
   GAME_JUMP: 0.40,     // in-game: later window beats an earlier window by this much
   GAME_JUMP_TO: 0.70,  // ...and the later window must be at least this accurate
@@ -13,7 +14,10 @@ const DET = {
   TOP3: 0.90,          // engine-like profile: top-3 match at least this...
   PROFILE_ACPL: 15,    // ...with average centipawn loss at most this...
   MIN_PROFILE: 10,     // ...over at least this many counted moves, and no mistakes
-  RATING_GAP: 600,     // plays this far above the listed Elo (from centipawn loss)
+  FP_STRONG: 80,       // motif fingerprint score at or above this is engine-like
+  FP_QUIET: 0.70,      // ...and needs this match rate in quiet positions (at least 6)
+  FP_COMPLEX: 0.70,    // ...or this match rate in complex positions (at least 4)
+  FP_STREAK: 8,        // ...or a perfect first-choice streak this long
   MPV: 3,
   MAX_GAMES: 30
 };
@@ -25,6 +29,55 @@ function wilson(k, n){
   if(!n) return [0, 0];
   const z = 1.96, p = k/n, d = 1 + z*z/n, c = p + z*z/(2*n), w = z*Math.sqrt(p*(1-p)/n + z*z/(4*n*n));
   return [Math.max(0, (c-w)/d), Math.min(1, (c+w)/d)];
+}
+
+// The motif is what the move does on the board, not just whether it matched a line.
+const DET_MOTIF_LABEL = {quiet:"quiet move", check:"check", capture:"capture", castle:"castling", promotion:"promotion", mate:"checkmate"};
+function detMotif(m){
+  if(!m) return "quiet";
+  if(/#/.test(m.san)) return "mate";
+  if(/\+/.test(m.san)) return "check";
+  if(m.promotion) return "promotion";
+  if(m.flags.includes("k") || m.flags.includes("q")) return "castle";
+  if(m.captured) return "capture";
+  return "quiet";
+}
+// The tactical idea behind a move, when it has one (fork for now).
+function detFork(fen, m){
+  if(!m || typeof forkTargets !== "function") return "";
+  try{
+    const ft = forkTargets(fen, m.from + m.to + (m.promotion||""));
+    return ft && ft.length >= 2 ? "forks " + ft.join(" and ") : "";
+  }catch(e){ return ""; }
+}
+
+// Fingerprint = style behind the matches. Top-3 matching alone is weak evidence,
+// so this weighs quiet and complex positions, loss and streaks as well.
+function detFpMotif(r){
+  return (r.quietN >= 6 && r.quietRate >= DET.FP_QUIET)
+    || (r.cx >= 4 && r.cxRate >= DET.FP_COMPLEX)
+    || (r.quietCxN >= 4 && r.quietCxRate >= DET.FP_QUIET)
+    || r.streak >= DET.FP_STREAK;
+}
+function detFingerprint(r){
+  const checks = [];
+  if(r.n < DET.MIN_PROFILE) return {score:null, label:"Needs " + (DET.MIN_PROFILE - r.n) + " more counted moves", checks};
+  let score = r.rate*30 + r.t3rate*10 + Math.max(0, 1 - r.acpl/80)*15
+    + (r.quietN >= 6 ? (r.quietRate || 0)*15 : 0)
+    + (r.cx >= 4 ? (r.cxRate || 0)*10 : 0)
+    + (r.quietCxN >= 4 ? (r.quietCxRate || 0)*10 : 0)
+    + Math.min(1, r.streak/12)*10;
+  score = Math.round(Math.max(0, Math.min(100, score)));
+  // No motif signal, or too much loss, means the fingerprint cannot be called strong.
+  if(!detFpMotif(r)) score = Math.min(score, 64);
+  else if(r.acpl > DET.PROFILE_ACPL) score = Math.min(score, 79);
+  const label = score>=DET.FP_STRONG ? "Strong" : score>=65 ? "Moderate" : score>=50 ? "Mixed" : "Human-like";
+  checks.push({ok: r.acpl <= DET.PROFILE_ACPL, txt:"Avg loss " + Math.round(r.acpl) + "cp"});
+  if(r.quietN >= 6) checks.push({ok: r.quietRate >= DET.FP_QUIET, txt:"Quiet match " + pct(r.quietRate) + " (" + r.quietHits + "/" + r.quietN + ")"});
+  if(r.cx >= 4) checks.push({ok: r.cxRate >= DET.FP_COMPLEX, txt:"Complex match " + pct(r.cxRate) + " (" + r.cxHits + "/" + r.cx + ")"});
+  if(r.quietCxN >= 4) checks.push({ok: r.quietCxRate >= DET.FP_QUIET, txt:"Quiet+complex " + pct(r.quietCxRate) + " (" + r.quietCxHits + "/" + r.quietCxN + ")"});
+  if(r.n >= 12) checks.push({ok: r.streak >= DET.FP_STREAK, txt:"Perfect streak " + r.streak});
+  return {score, label, checks};
 }
 
 // Top-N analysis of one position. Scores in .lines are from the mover's side; .cp/.mate are from White's side (like analyze()).
@@ -55,6 +108,24 @@ function detAnalyze(fen, depth, wk, mpv){
     if(dcache.size > 800) dcache.delete(dcache.keys().next().value);
     return r;
   });
+}
+
+// The person the detector should focus on: the named player, or the one with the most games.
+function detFocus(subs, player){
+  if(!subs.length) return null;
+  const p = player.trim().toLowerCase();
+  if(p){
+    const matched = subs.filter(x => x.name.toLowerCase().includes(p));
+    return {name: player.trim(), games: new Set(matched.map(x => x.fi)).size};
+  }
+  const groups = [], seen = new Set();
+  subs.forEach(x => {
+    const k = x.name.trim().toLowerCase();
+    if(seen.has(k)) return;
+    seen.add(k);
+    groups.push({name: x.name.trim(), games: new Set(subs.filter(y => y.name.trim().toLowerCase() === k).map(y => y.fi)).size});
+  });
+  return groups.reduce((a,b) => b.games > a.games ? b : a, groups[0]);
 }
 
 // Pick the subject(s) to score for one parsed game.
@@ -90,6 +161,8 @@ function detJump(flags, W){
 // Score one side of one game from the analysed positions.
 function detScore(sub, fens, pv){
   const list = sub.moves, entries = [];
+  const sp = String(fens[0] || "").trim().split(/\s+/);
+  const startTurn = sp[1] === "b" ? 1 : 0, startNo = parseInt(sp[5], 10) || 1;
   list.forEach((m, i) => {
     if(m.color !== sub.color) return;
     const before = pv[i], after = pv[i+1];
@@ -104,7 +177,8 @@ function detScore(sub, fens, pv){
     const complex = spread != null && spread <= DET.COMPLEX_SPREAD;
     const prev = i > 0 ? list[i-1] : null;
     const recapture = !!(m.captured && prev && prev.captured && prev.to === m.to);
-    const obvious = recapture || (gap != null && gap >= DET.OBVIOUS_GAP);
+    const only = gap != null && gap >= DET.OBVIOUS_GAP;
+    const obvious = recapture || only;
     let legal = 99; try{ legal = new Chess(fens[i]).moves().length; }catch(e){}
     let book = null; try{ book = lookupFen(fens[i+1]); }catch(e){}
     const mine = before.mate != null ? (before.mate*mover > 0 ? 1e5 : -1e5) : before.cp*mover;
@@ -115,7 +189,17 @@ function detScore(sub, fens, pv){
     else if(obvious) skip = "obvious";
     let loss = Math.max(0, (clip(before.cp) - clip(after.cp)) * mover);
     if(match) loss = 0;
-    entries.push({ply:i+1, san:m.san, match, top3, complex, loss:Math.min(400, loss), skip});
+    let rank = match ? 1 : 0;
+    if(!rank) for(let k=0;k<Math.min(3,lines.length);k++){ if(lines[k].uci===uci){ rank = k+1; break; } }
+    const motif = detMotif(m), fork = detFork(fens[i], m), topSan = [];
+    for(const l of lines.slice(0, 3)){
+      try{ const mm = uciToMove(new Chess(fens[i]), l.uci); if(mm) topSan.push(mm.san); }catch(e){}
+    }
+    let bestQuiet = false;
+    try{ const bm = uciToMove(new Chess(fens[i]), before.best); bestQuiet = !!bm && detMotif(bm) === "quiet"; }catch(e){}
+    const turnIdx = i + startTurn;
+    const no = (startNo + Math.floor(turnIdx/2)) + (turnIdx % 2 ? "..." : ".");
+    entries.push({ply:i+1, no, san:m.san, match, top3, complex, only, rank, motif, fork, bestQuiet, topSan, loss:Math.min(400, loss), skip});
   });
   const used = entries.filter(e => !e.skip), n = used.length;
   const hits = used.filter(e => e.match).length, t3 = used.filter(e => e.top3).length;
@@ -124,10 +208,24 @@ function detScore(sub, fens, pv){
   entries.forEach(e => { if(e.skip) skips[e.skip]++; });
   const acpl = n ? used.reduce((t,e) => t + e.loss, 0)/n : 0;
   const W = Math.max(5, Math.min(DET.WIN, Math.floor(n/3)));
-  return {entries, used, n, hits, rate: n ? hits/n : 0, ci: wilson(hits, n), t3, t3rate: n ? t3/n : 0,
+  const quietUsed = used.filter(e => e.bestQuiet), forceUsed = used.filter(e => !e.bestQuiet);
+  const quietHits = quietUsed.filter(e => e.match).length, forceHits = forceUsed.filter(e => e.match).length;
+  const quietCx = used.filter(e => e.bestQuiet && e.complex), quietCxHits = quietCx.filter(e => e.match).length;
+  let run = 0, streak = 0;
+  used.forEach(e => { if(e.match){ run++; if(run > streak) streak = run; } else run = 0; });
+  const motifHits = {quiet:0, check:0, capture:0, castle:0, promotion:0, mate:0};
+  used.forEach(e => { if(e.match) motifHits[e.motif]++; });
+  const r = {entries, used, n, hits, rate: n ? hits/n : 0, ci: wilson(hits, n), t3, t3rate: n ? t3/n : 0,
     acpl, big: used.filter(e => e.loss >= 100).length, cx: cx.length, cxHits: cx.filter(e => e.match).length,
-    skips, skipped: entries.length - n, flags, W, jump: detJump(flags, W),
-    perfElo: n >= DET.MIN_PROFILE ? Math.round(interp(acpl, ACPL_ELO)/10)*10 : null};
+    quietN: quietUsed.length, quietHits, quietRate: quietUsed.length ? quietHits/quietUsed.length : null,
+    forceN: forceUsed.length, forceHits, forceRate: forceUsed.length ? forceHits/forceUsed.length : null,
+    cxRate: cx.length ? cx.filter(e => e.match).length/cx.length : null,
+    quietCxN: quietCx.length, quietCxHits, quietCxRate: quietCx.length ? quietCxHits/quietCx.length : null,
+    streak, motifHits, forkHits: used.filter(e => e.match && e.fork).length,
+    onlyMatches: entries.filter(e => e.only && e.match).length,
+    skips, skipped: entries.length - n, flags, W, jump: detJump(flags, W)};
+  r.fp = detFingerprint(r);
+  return r;
 }
 
 // every flag a player-game can carry
@@ -135,10 +233,9 @@ function detFlags(r, sub, seriesNote){
   const tiny = r.n < DET.MIN_MOVES;
   const inv = !tiny && r.rate >= DET.INVESTIGATE;
   const prof = !tiny && !inv && r.n >= DET.MIN_PROFILE && r.t3rate >= DET.TOP3 && r.acpl <= DET.PROFILE_ACPL && r.big === 0;
-  const gap = (sub.elo && r.perfElo) ? r.perfElo - sub.elo : null;
-  const far = !tiny && gap != null && gap >= DET.RATING_GAP && r.n >= 12;
-  return {tiny, inv, prof, far, gap, gj: !!r.jump, sj: !!seriesNote,
-    red: inv || prof || far, any: inv || prof || far || !!r.jump || !!seriesNote};
+  const fp = !tiny && r.n >= DET.MIN_PROFILE && r.fp.score != null && r.fp.score >= DET.FP_STRONG && detFpMotif(r);
+  return {tiny, inv, prof, fp, gj: !!r.jump, sj: !!seriesNote,
+    red: inv || prof || fp, any: inv || prof || fp || !!r.jump || !!seriesNote};
 }
 
 function detChart(r){
@@ -165,12 +262,16 @@ function detChart(r){
 // one chip per move the player made: first choice, top 3, other, or not counted
 function detMoves(r){
   const chips = r.entries.map(e => {
-    const no = Math.ceil(e.ply/2) + (e.ply%2 ? "." : "...");
+    const no = e.no || (Math.ceil(e.ply/2) + (e.ply%2 ? "." : "..."));
     const c = e.skip ? "sk" : e.match ? "t1" : e.top3 ? "t3" : "ms";
-    const tip = e.skip ? "Not counted: " + e.skip : e.match ? "Engine's first choice" : e.top3 ? "In the engine's top 3" : "Lost about " + Math.round(e.loss) + " centipawns";
-    return `<span class="dm ${c}${(!e.skip && e.loss >= 100) ? " bad" : ""}" title="${tip}">${no}${esc(e.san)}</span>`;
+    let tip = e.skip ? "Not counted: " + e.skip : e.match ? "Engine's first choice" : e.top3 ? "In the engine's top 3" : "Lost about " + Math.round(e.loss) + " centipawns";
+    if(e.topSan && e.topSan.length) tip += " | Top 3: " + e.topSan.join(", ");
+    if(e.motif) tip += " | Motif: " + DET_MOTIF_LABEL[e.motif] + (e.fork ? " (" + e.fork + ")" : "");
+    if(e.rank) tip += " | Rank " + e.rank;
+    return `<button type="button" class="dm ${c}${(!e.skip && e.loss >= 100) ? " bad" : ""}" title="${esc(tip)}" data-info="${esc(tip)}">${no}${esc(e.san)}</button>`;
   }).join("");
   return `<div class="dmoves">${chips}</div>
+    <div class="dmd hide" aria-live="polite"></div>
     <div class="dlegend"><span><i class="t1"></i>First choice</span><span><i class="t3"></i>Top 3</span><span><i class="ms"></i>Other</span><span><i class="sk"></i>Not counted</span></div>`;
 }
 
@@ -180,7 +281,7 @@ function detCard(r, label, sub, f, seriesNote){
   if(f.tiny) flags += `<span class="dflag low">Too few moves</span>`;
   if(f.inv) flags += `<span class="dflag inv">Needs investigation</span>`;
   if(f.prof) flags += `<span class="dflag inv">Engine-like precision</span>`;
-  if(f.far) flags += `<span class="dflag inv">Plays far above rating</span>`;
+  if(f.fp && !f.prof) flags += `<span class="dflag inv">Engine-like motif fingerprint</span>`;
   if(f.gj) flags += `<span class="dflag jump">Sudden jump in game</span>`;
   if(f.sj) flags += `<span class="dflag jump">Jump vs earlier games</span>`;
   if(!f.tiny && !f.any) flags += `<span class="dflag ok">No flag</span>`;
@@ -188,7 +289,7 @@ function detCard(r, label, sub, f, seriesNote){
   let why = "";
   if(f.inv) why += `<p><b>${pct(r.rate)}</b> of the counted moves (${r.hits} of ${r.n}) were Stockfish's first choice, at or above the ${pct(DET.INVESTIGATE)} line (95% range ${pct(lo)}-${pct(hi)}).</p>`;
   if(f.prof) why += `<p>Under the ${pct(DET.INVESTIGATE)} line on first choices (${pct(r.rate)}), but <b>${pct(r.t3rate)}</b> of moves were in Stockfish's top 3, the average loss was only <b>${Math.round(r.acpl)}</b> centipawns, and there was not one mistake in ${r.n} moves. That is how an engine plays.</p>`;
-  if(f.far) why += `<p>The moves play like roughly <b>${r.perfElo}</b> Elo (from centipawn loss) against a listed rating of <b>${sub.elo}</b>.</p>`;
+  if(f.fp && !f.inv && !f.prof) why += `<p>First choices stay under the ${pct(DET.INVESTIGATE)} line, but the motif fingerprint is engine-like: quiet-move match <b>${r.quietN ? pct(r.quietRate) : "-"}</b>${r.quietN ? ` (${r.quietHits}/${r.quietN})` : ""}, complex-position match <b>${r.cx ? pct(r.cxRate) : "-"}</b>, longest perfect streak <b>${r.streak}</b>. Reproducing quiet and complex engine moves is the harder part for a human.</p>`;
   if(f.gj){
     const fa = r.used[r.jump.a].ply, fb = r.used[r.jump.b].ply;
     why += `<p>Engine-move accuracy jumped from <b>${pct(r.jump.from)}</b> (around ply ${fa}) to <b>${pct(r.jump.to)}</b> (around ply ${fb}) over ${r.jump.W}-move windows, a rise of ${Math.round(r.jump.jump*100)} points.</p>`;
@@ -197,6 +298,24 @@ function detCard(r, label, sub, f, seriesNote){
   if(r.n > 0 && r.n < 20) why += `<p>Only ${r.n} moves were counted, so treat these numbers with care.</p>`;
   const sk = r.skipped ? `Not counted (${r.skipped}): ${[["book",r.skips.book],["forced",r.skips.forced],["decided",r.skips.decided],["obvious",r.skips.obvious]].filter(x => x[1]).map(x => x[1] + " " + x[0]).join(", ")}.` : "";
   const cxTxt = r.cx >= 4 ? ` In ${r.cx} positions with several good options the engine's first choice was played ${r.cxHits} time${r.cxHits===1?"":"s"}.` : "";
+  const fp = r.fp, mh = r.motifHits;
+  const fpCls = fp.label === "Strong" ? "strong" : fp.label === "Moderate" ? "moderate" : "";
+  const fpBadge = fp.label === "Strong" ? "strong" : fp.label === "Moderate" ? "mid" : "";
+  const fpChecks = fp.checks.map(c => `<span class="dfpchk ${c.ok?"ok":"no"}">${esc(c.txt)}</span>`).join("");
+  const mlist = [["quiet","quiet"],["check","checks"],["capture","captures"],["castle","castles"],["promotion","promotions"],["mate","mates"]]
+    .filter(x => mh[x[0]]).map(x => mh[x[0]] + " " + x[1]);
+  const mline = mlist.length ? `Motifs behind first-choice hits: ${mlist.join(", ")}.${r.forkHits ? ` Forks: ${r.forkHits}.` : ""}${r.onlyMatches ? ` Only-moves found (not counted): ${r.onlyMatches}.` : ""}` : "";
+  const fpBlock = r.n ? `<div class="dfp ${fpCls}">
+    <div class="dfphead"><b>Motif fingerprint</b><span class="dfpbadge ${fpBadge}">${esc(fp.label)}${fp.score != null ? " " + fp.score + "/100" : ""}</span></div>
+    <div class="dstats dfpstats">
+      <div class="dstat"><strong>${r.quietN ? pct(r.quietRate) : "-"}</strong><small>Quiet-move match${r.quietN ? ` (${r.quietHits}/${r.quietN})` : ""}</small></div>
+      <div class="dstat"><strong>${r.forceN ? pct(r.forceRate) : "-"}</strong><small>Forcing-move match${r.forceN ? ` (${r.forceHits}/${r.forceN})` : ""}</small></div>
+      <div class="dstat"><strong>${r.cx ? pct(r.cxRate) : "-"}</strong><small>Complex-position match${r.cx ? ` (${r.cxHits}/${r.cx})` : ""}</small></div>
+      <div class="dstat"><strong>${r.streak}</strong><small>Longest perfect streak</small></div>
+    </div>
+    ${fpChecks ? `<div class="dfpchks">${fpChecks}</div>` : ""}
+    ${mline ? `<p class="dnote">${mline}</p>` : ""}
+  </div>` : "";
   return `<div class="card dcard ${cls}">
     <div class="dhead"><div><b>${esc(label)}</b><small>${esc(sub)}</small></div><div class="dflags">${flags}</div></div>
     <div class="dstats">
@@ -205,6 +324,7 @@ function detCard(r, label, sub, f, seriesNote){
       <div class="dstat"><strong>${r.n ? Math.round(r.acpl) : "-"}</strong><small>Avg centipawn loss</small></div>
       <div class="dstat"><strong>${r.hits}/${r.n}</strong><small>First choices / counted</small></div>
     </div>
+    ${fpBlock}
     ${r.n >= 2*r.W ? detChart(r) : ""}
     ${detMoves(r)}
     ${why ? `<div class="dwhy ${f.red?"":"jump"}">${why}</div>` : ""}
@@ -237,7 +357,7 @@ async function runDetector(){
   let games = parsePgnGames(text);
   if(!games.length){
     const g = new Chess();
-    if(!g.load_pgn(text, {sloppy:true}) || !g.history().length){ st.textContent = "That PGN could not be read. Check the moves and try again."; return; }
+    if(!g.load_pgn(fixPgnFen(text), {sloppy:true}) || !g.history().length){ st.textContent = "That PGN could not be read. Check the moves and try again."; return; }
     const hd = g.header();
     games = [{white:hd.White||"White", black:hd.Black||"Black", date:hd.Date||"", pgn:text, index:0, event:hd.Event||"", result:hd.Result||"", whiteElo:hd.WhiteElo||"", blackElo:hd.BlackElo||""}];
   }
@@ -251,7 +371,7 @@ async function runDetector(){
     const ss = detSubjects(game, gi, player, side);
     if(!ss.length) continue;
     const g = new Chess();
-    if(!g.load_pgn(game.pgn, {sloppy:true})) continue;
+    if(!g.load_pgn(fixPgnFen(game.pgn), {sloppy:true})) continue;
     const list = g.history({verbose:true});
     if(!list.length) continue;
     const startFen = ((g.header && g.header()) || {}).FEN;
@@ -263,6 +383,11 @@ async function runDetector(){
   }
   if(!subs.length){
     st.textContent = player.trim() ? `No game in that PGN has a player matching "${player.trim()}".` : "No playable games found in that PGN.";
+    return;
+  }
+  const focus = detFocus(subs, player);
+  if(focus && focus.games < DET.MIN_GAMES){
+    st.textContent = `Found ${focus.games} game${focus.games===1?"":"s"} for ${focus.name}. For a reliable result, paste more than ${DET.MIN_GAMES-1} games by the same player (as White or Black), then run again.`;
     return;
   }
   const token = ++dRunning;
@@ -331,11 +456,12 @@ async function runDetector(){
   let h = `<div class="card dsum"><h2>Result</h2>
     <div class="dstats">
       <div class="dstat ${cnt(f => f.inv)?"inv":"ok"}"><strong>${cnt(f => f.inv)}</strong><small>Over ${pct(DET.INVESTIGATE)} (needs investigation)</small></div>
-      <div class="dstat ${cnt(f => f.prof || f.far)?"inv":"ok"}"><strong>${cnt(f => f.prof || f.far)}</strong><small>Engine-like precision / above rating</small></div>
+      <div class="dstat ${cnt(f => f.fp)?"inv":"ok"}"><strong>${cnt(f => f.fp)}</strong><small>Engine-like motif fingerprints</small></div>
+      <div class="dstat ${cnt(f => f.prof)?"inv":"ok"}"><strong>${cnt(f => f.prof)}</strong><small>Engine-like precision</small></div>
       <div class="dstat ${cnt(f => f.gj || f.sj)?"inv":"ok"}"><strong>${cnt(f => f.gj || f.sj)}</strong><small>Sudden jumps</small></div>
       <div class="dstat"><strong>${subs.length}</strong><small>Player-games checked</small></div>
     </div>
-    <p class="dnote">${nFlag ? `${nFlag} of ${subs.length} flagged. A flag is a reason to look closer, not proof of cheating.` : "Nothing flagged."} Book moves, forced moves, positions already decided (about ±7 pawns) and obvious moves (recaptures and only-moves) are not counted, because anyone plays those. Stockfish at this depth is the reference, so a stronger or different engine can disagree even when a player did use one.${capped ? ` Only the first ${DET.MAX_GAMES} games were checked.` : ""}</p>`;
+    <p class="dnote">${nFlag ? `${nFlag} of ${subs.length} flagged. A flag is a reason to look closer, not proof of cheating.` : "Nothing flagged."} Book moves, forced moves, positions already decided (about ±7 pawns) and obvious moves (recaptures and only-moves) are not counted, because anyone plays those. Top-3 matching alone is weak evidence, so each card also builds a motif fingerprint from quiet-move and complex-position precision, centipawn loss and perfect streaks. Stockfish at this depth is the reference, so a stronger or different engine can disagree even when a player did use one.${capped ? ` Only the first ${DET.MAX_GAMES} games were checked.` : ""}</p>`;
   if(fenSets.length > 1 && subs.length > 1) h += detSeriesChart(subs.map((x, i) => ({i, res:x.res, f:x.f})));
   h += `</div>`;
   subs.forEach(x => {
@@ -352,6 +478,14 @@ async function runDetector(){
 }
 $("dgo").onclick = async () => { try{ await runDetector(); }catch(err){ console.error(err); $("dstatus").textContent = "Something went wrong while checking that game. Try again."; $("dgo").disabled = false; $("dbar").style.display = "none"; } };
 $("dedit").onclick = () => { $("dform").classList.remove("hide"); $("dedit").classList.add("hide"); };
+$("dresults").addEventListener("click", e => {
+  const chip = e.target.closest && e.target.closest(".dm");
+  if(!chip || !chip.dataset.info) return;
+  const card = chip.closest(".dcard"), box = card && card.querySelector(".dmd");
+  if(!box) return;
+  box.textContent = chip.dataset.info;
+  box.classList.remove("hide");
+});
 $("dfromrev").onclick = () => {
   const t = $("pgn").value.trim();
   if(!t){ $("dstatus").textContent = "Nothing loaded in Review yet. Load a game there first, or paste a PGN here."; return; }
