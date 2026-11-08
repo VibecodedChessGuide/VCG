@@ -287,6 +287,21 @@ body.cssfs .tabs+*{}
 #llist .botrow{position:relative;padding-right:2.2rem}
 #llist .botrow::after{content:"\203A";position:absolute;right:.9rem;top:50%;transform:translateY(-50%);color:var(--muted);font-size:1.5rem;line-height:1}
 #ebots{display:grid;gap:.5rem;margin-top:.7rem}
+.nnues{border-top:1px solid var(--line);margin-top:1rem;padding-top:.9rem}
+.nhead{display:flex;align-items:baseline;justify-content:space-between;gap:.7rem;flex-wrap:wrap}
+.nhead b{font-size:1rem}
+.nhead .tip{margin:0;flex:1 1 16rem}
+.nnuelist{display:grid;gap:.45rem;margin:.65rem 0 .1rem}
+.nnuerow{display:flex;align-items:center;gap:.6rem;background:var(--deep);border-left:4px solid transparent;border-radius:.55rem;padding:.55rem .7rem;min-width:0}
+.nnuerow.sel{border-left-color:var(--good);background:var(--raise)}
+.nnuerow .ninfo{min-width:0;flex:1}
+.nnuerow .nname{font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nnuerow .nmeta{color:var(--muted);font-size:.78rem;margin-top:.1rem}
+.nnuerow .nact{display:flex;gap:.35rem;flex:none}
+.nnuerow .nact button{padding:.35rem .6rem;font-size:.8rem}
+#nnueform{margin-top:.55rem}
+#nnueform #nnuename{flex:1 1 12rem}
+@media (max-width:30rem){.nnuerow{flex-wrap:wrap}.nnuerow .nact{margin-left:auto}}
 .dtag{font-weight:800;padding:.05rem .5rem;border-radius:.6rem;font-size:.78rem;color:#fff;margin-left:.3rem}
 .dtag.d0{background:#5f8f2c}.dtag.d1{background:#c77a0c}.dtag.d2{background:#d6341f}
 .phead{display:flex;align-items:center;gap:.7rem;margin-bottom:.8rem}

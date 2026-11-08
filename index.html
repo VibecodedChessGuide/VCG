@@ -9,6 +9,7 @@
     config.js         engine paths, bots, boards, levels
     sound.js          sound effects
     engine.js         engine worker pool + search
+    nnue.js           imported opponent NNUE storage + loader
     helpers.js        general helpers
     tactics.js        forks, pins, hanging pieces
     openings.js       openings dataset + explorer
@@ -368,6 +369,20 @@
       <div class="ptxt" id="eprogtxt"></div>
       <div id="ebots" class="bots"></div>
       <div class="status" id="esel">Selected engine: Stockfish 19</div>
+      <div class="nnues">
+        <div class="nhead"><b>Opponent NNUE</b><span class="tip">Only the bot uses this network, in a separate Stockfish 19 Lite worker. Review, detector, and move analysis keep the built-in network.</span></div>
+        <div id="nnuelist" class="nnuelist"></div>
+        <div class="row">
+          <button id="nnueimport" type="button">Import NNUE...</button>
+        </div>
+        <input id="nnuefile" type="file" accept=".nnue" class="hide" aria-label="Choose an NNUE file">
+        <div id="nnueform" class="row hide">
+          <input id="nnuename" type="text" maxlength="64" placeholder="Network name" autocomplete="off" spellcheck="false" aria-label="Network name">
+          <button id="nnuesave" class="primary" type="button">Save</button>
+          <button id="nnuecancel" class="ghost" type="button">Cancel</button>
+        </div>
+        <div class="status" id="nnuemsg" role="status" aria-live="polite"></div>
+      </div>
     </div>
   </div>
 
@@ -513,6 +528,7 @@
 <script src="assets/js/app/config.js"></script>
 <script src="assets/js/app/sound.js"></script>
 <script src="assets/js/app/engine.js"></script>
+<script src="assets/js/app/nnue.js"></script>
 <script src="assets/js/app/helpers.js"></script>
 <script src="assets/js/app/tactics.js"></script>
 <script src="assets/js/app/openings.js"></script>

@@ -79,16 +79,39 @@ function bootWorker(url, onProgress, prog){
     w.postMessage("uci");
   });
 }
-async function newWorker(onProgress, bot){
-  const b = bot || BOT(), url = botUrl(b);
+const patchedEngineURLs = new Map();
+async function patchedEngineUrl(url){
+  if(patchedEngineURLs.has(url)) return patchedEngineURLs.get(url);
+  const p = (async () => {
+    const res = await fetch(url, {credentials:"same-origin"});
+    if(!res.ok) throw new Error("HTTP " + res.status + " while loading the engine.");
+    let src = await res.text();
+    const marker = 'r.ccall=(e,t,n,a,o)=>{';
+    if(src.indexOf(marker) < 0) throw new Error("This engine build cannot load an imported NNUE.");
+    const wasm = new URL(url.replace(/\.js(?:[?#].*)?$/i, ".wasm"), location.href).href;
+    const fs = 'r.FS={writeFile:function(p,d){var f=de(p,"w",511);return me(f,d,0,d.length)},readFile:function(p){var f=de(p,"r",0),n=f.node.J,o=new Uint8Array(n);f.F.read(f,o,0,n,0);return o}};globalThis.__sfFS=r.FS;';
+    src = src.replace(marker, fs + marker);
+    const hashExpr = 'a=self.location.hash.substr(1).split(",")';
+    if(src.indexOf(hashExpr) < 0) throw new Error("This engine build cannot load an imported NNUE.");
+    src = src.replace(hashExpr, 'a=globalThis.__nnueWasm?[encodeURIComponent(globalThis.__nnueWasm)]:self.location.hash.substr(1).split(",")');
+    src = 'globalThis.__nnueWasm=' + JSON.stringify(wasm) + ';\n' + src;
+    src += '\n(function(){var o=globalThis.onmessage;if(typeof o!=="function")return;globalThis.onmessage=function(e){var d=e&&e.data;if(d&&typeof d==="object"&&d.__nnue){try{globalThis.__sfFS.writeFile(d.path,new Uint8Array(d.data));o({data:"setoption name EvalFile value "+d.path});o({data:"isready"});}catch(err){postMessage("info string NNUE load failed: "+err);}}else{return o(e);}};})();\n';
+    return URL.createObjectURL(new Blob([src], {type:"text/javascript"}));
+  })();
+  patchedEngineURLs.set(url, p);
+  p.catch(() => patchedEngineURLs.delete(url));
+  return p;
+}
+async function newWorker(onProgress, bot, opts){
+  const b = bot || BOT(), url = botUrl(b), patch = !!(opts && opts.nnue);
   if(onProgress) engineProgressReset(!!b.prog);
-  try{ return await bootWorker(url, onProgress, !!b.prog); }
+  try{ return await bootWorker(patch ? await patchedEngineUrl(url) : url, onProgress, !!b.prog); }
   catch(e){
     if(b.single && url !== b.single){
       const fb = BOTS.find(x => x.url === b.single) || {};
       engineNote = b.name + " multi-threaded build unavailable; using " + (fb.name || "single-threaded build") + ".";
       if(onProgress) engineProgressReset(!!fb.prog);
-      return await bootWorker(b.single, onProgress, !!fb.prog);
+      return await bootWorker(patch ? await patchedEngineUrl(b.single) : b.single, onProgress, !!fb.prog);
     }
     throw e;
   }

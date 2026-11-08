@@ -62,6 +62,7 @@ async function startGame(){
   setNames(); snd("start");
   setEvalBar("pevalbar", {cp:0, mate:null}, pFlip);
   renderPlay();
+  if(nnueActive) idle(() => ensureOpponentEngine());
   if(humanColor==="b") await engineMove(id); else beginHumanTurn();
 }
 function beginHumanTurn(){
@@ -72,10 +73,17 @@ function beginHumanTurn(){
 async function engineMove(id){
   thinking = true; setP("Engine is thinking…"); renderPlay();
   const lvl = $("plevel").value, L = LEVELS[lvl], fen = pg.fen();
-  let u = (spec && spec.fen===fen && spec.lvl===lvl) ? await spec.p : null;
+  let u = (spec && spec.fen===fen && spec.lvl===lvl && spec.net===nnueActive) ? await spec.p : null;
   spec = null;
   if(id!==gameId || over) return;
-  if(!u || u==="(none)") u = await enqueue(() => engineSearch(fen, L.skill, L.depth));
+  if(!u || u==="(none)"){
+    if(nnueActive && !opponentWorker()) setP("Loading opponent network...");
+    const ow = nnueActive ? await ensureOpponentEngine() : null;
+    if(id!==gameId || over) return;
+    setP("Engine is thinking…");
+    if(ow) u = await onW(ow, () => engineSearch(fen, L.skill, L.depth, ow));
+    if(!u) u = await enqueue(() => engineSearch(fen, L.skill, L.depth));
+  }
   if(!u && (!main || main.dead)){
     await recoverEngine();
     if(id!==gameId || over) return;
@@ -116,9 +124,11 @@ async function humanMoveInner(from, to, animate=true){
   clearMarks("pboard");
   snd(sndKind(m,true));
   const fenAfter = pg.fen(), ply = pg.history().length;
-  if(aux && !aux.dead && !pg.game_over()){
+  const ow = opponentWorker();
+  const sw = nnueActive ? ow : ((aux && !aux.dead) ? aux : null);
+  if(sw && !pg.game_over()){
     const lvl = $("plevel").value, L = LEVELS[lvl];
-    spec = {fen:fenAfter, lvl, p:onW(aux, () => engineSearch(fenAfter, L.skill, L.depth, aux)).catch(() => null)};
+    spec = {fen:fenAfter, lvl, net:nnueActive, p:onW(sw, () => engineSearch(fenAfter, L.skill, L.depth, sw)).catch(() => null)};
   }
   renderPlay(); setP("Checking your move…");
   let before = await (bp || enqueue(() => analyze(fenBeforeMove, FD)));
