@@ -104,6 +104,19 @@ textarea{display:block;width:100%;height:7rem;padding:.75rem;resize:vertical;fon
 .tabs button:active:not(:disabled),.railbtn:active:not(:disabled){transform:none;border-bottom-width:0}
 .tabs button.on{color:var(--good)}
 .tabs button.on::before{content:"";position:absolute;top:0;left:28%;right:28%;height:3px;border-radius:0 0 3px 3px;background:var(--good)}
+/* small phones: 7 tabs need to be tighter */
+@media (max-width:25rem){
+  :root{--tabH:3.4rem}
+  .tabs button{font-size:.6rem;gap:.12rem;min-width:0}
+  .tabs button svg{width:1.35rem;height:1.35rem}
+  .tabs button span{max-width:100%;padding:0 .1rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+}
+/* very small phones: icons only (labels stay for screen readers) */
+@media (max-width:21rem){
+  :root{--tabH:3.2rem}
+  .tabs button svg{width:1.6rem;height:1.6rem}
+  .tabs button span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+}
 
 /* settings + full screen: icon buttons in the top bar */
 .railbtn,.settings summary{width:2.6rem;height:2.6rem;border-radius:.6rem;padding:0}
