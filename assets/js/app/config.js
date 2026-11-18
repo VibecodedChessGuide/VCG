@@ -12,6 +12,30 @@ const BOTS = [
 ];
 let botId = "sf19";
 const BOT = () => BOTS.find(b => b.id === botId) || BOTS[0];
+
+// Opponent-only bots. These never touch the analysis, review, detector, or hint paths: those stay on
+// Stockfish. Each one is a separate Web Worker and speaks UCI, so it can only play the other side.
+const PLAY_BOT_BASE = "assets/js/bots/";
+const PLAY_BOTS = [
+  {id:"stockfish", name:"Stockfish (analysis engine)", level:"casual",
+   desc:"The same Stockfish build used for analysis. Full-strength play and evaluation."},
+  {id:"lozza", name:"Lozza 11", url:PLAY_BOT_BASE+"lozza-11.js", size:668003, level:"casual",
+   depths:{beginner:2, casual:4, strong:6, max:8}, setup:["setoption name Hash value 16"],
+   desc:"Open-source JavaScript UCI engine by Colin Jenkins. Hand-written evaluation, no WASM."},
+  {id:"tomitank", name:"TomitankChess 7", url:PLAY_BOT_BASE+"tomitank-7.js", size:407214, level:"casual",
+   depths:{beginner:2, casual:4, strong:6, max:8}, pre:["u"], setup:["setoption name Hash value 32"],
+   desc:"Open-source pure-JavaScript engine by Tamas Kuzmics. Strong, bitboard based, still no WASM."},
+  {id:"raccoon", name:"Raccoon 1.0", url:PLAY_BOT_BASE+"raccoon-1.js", size:166906, level:"casual",
+   depths:{beginner:2, casual:3, strong:5, max:7}, setup:["setoption name OwnBook value false"],
+   desc:"Open-source JavaScript UCI engine by Michael Edegware. Lighter and looser than the others."},
+  {id:"sunfish", name:"Sunfish", url:PLAY_BOT_BASE+"sunfish.js", size:30134, level:"beginner",
+   depths:{beginner:2, casual:3, strong:4, max:5}, startpos:true,
+   desc:"Tiny open-source JavaScript port of Sunfish. Beginner-strength and very quick to load."}
+];
+const PLAY_BOT_KEY = "vcg.playbot";
+let playBotId = "stockfish";
+try{ const v = localStorage.getItem(PLAY_BOT_KEY); if(PLAY_BOTS.some(b => b.id === v)) playBotId = v; }catch(e){}
+const PLAY_BOT = () => PLAY_BOTS.find(b => b.id === playBotId) || PLAY_BOTS[0];
 // Local board and piece images, originally from chess.com's CDN (URL patterns from
 // GiorgioMegrelli/chess.com-boards-and-pieces default-config.json).
 // l / d are the light and dark square colors, used for coordinates and as a fallback.

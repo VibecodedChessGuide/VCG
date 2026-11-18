@@ -47,7 +47,7 @@ function renderPlay(boardOnly){
 function setNames(){
   const lvl = $("plevel").options[$("plevel").selectedIndex].text;
   const oppCol = humanColor==="w" ? "b" : "w";
-  $("ptop").innerHTML = `<span class="sw ${oppCol}"></span>${BOT().name} · ${lvl}`;
+  $("ptop").innerHTML = `<span class="sw ${oppCol}"></span>${PLAY_BOT().name} · ${lvl}`;
   $("pbot").innerHTML = `<span class="sw ${humanColor}"></span>You`;
 }
 
@@ -62,7 +62,8 @@ async function startGame(){
   setNames(); snd("start");
   setEvalBar("pevalbar", {cp:0, mate:null}, pFlip);
   renderPlay();
-  if(nnueActive) idle(() => ensureOpponentEngine());
+  if(PLAY_BOT().url) idle(() => ensurePlayBotEngine());
+  else if(nnueActive) idle(() => ensureOpponentEngine());
   if(humanColor==="b") await engineMove(id); else beginHumanTurn();
 }
 function beginHumanTurn(){
@@ -71,23 +72,36 @@ function beginHumanTurn(){
   setP(pg.in_check() ? "Check. Your move." : "Your move.");
 }
 async function engineMove(id){
-  thinking = true; setP("Engine is thinking…"); renderPlay();
+  const pbot = PLAY_BOT(), botGame = !!pbot.url;
+  thinking = true; setP(pbot.name + " is thinking…"); renderPlay();
   const lvl = $("plevel").value, L = LEVELS[lvl], fen = pg.fen();
-  let u = (spec && spec.fen===fen && spec.lvl===lvl && spec.net===nnueActive) ? await spec.p : null;
+  const uciMoves = () => pg.history({verbose:true}).map(m => m.from + m.to + (m.promotion || ""));
+  let u = (spec && spec.fen===fen && spec.lvl===lvl && (botGame ? spec.bot===playBotId : spec.net===nnueActive)) ? await spec.p : null;
   spec = null;
   if(id!==gameId || over) return;
   if(!u || u==="(none)"){
-    if(nnueActive && !opponentWorker()) setP("Loading opponent network...");
-    const ow = nnueActive ? await ensureOpponentEngine() : null;
-    if(id!==gameId || over) return;
-    setP("Engine is thinking…");
-    if(ow) u = await onW(ow, () => engineSearch(fen, L.skill, L.depth, ow));
-    if(!u) u = await enqueue(() => engineSearch(fen, L.skill, L.depth));
+    if(botGame){
+      setP(pbot.name + " is thinking…");
+      u = await playBotSearch(fen, lvl, uciMoves());
+      if(id!==gameId || over) return;
+    } else {
+      if(nnueActive && !opponentWorker()) setP("Loading opponent network...");
+      const ow = nnueActive ? await ensureOpponentEngine() : null;
+      if(id!==gameId || over) return;
+      setP("Stockfish is thinking…");
+      if(ow) u = await onW(ow, () => engineSearch(fen, L.skill, L.depth, ow));
+      if(!u) u = await enqueue(() => engineSearch(fen, L.skill, L.depth));
+    }
   }
-  if(!u && (!main || main.dead)){
+  if((!u || u==="(none)") && (!main || main.dead)){
     await recoverEngine();
     if(id!==gameId || over) return;
     if(engineReady) u = await enqueue(() => engineSearch(fen, L.skill, L.depth));
+  }
+  if((!u || u==="(none)") && botGame){
+    // Safety net: if the opponent bot fails, let Stockfish answer rather than stall the game.
+    setP("Stockfish is taking over this move…");
+    u = await enqueue(() => engineSearch(fen, L.skill, L.depth));
   }
   if(id!==gameId || over) return;
   if(optMode) await new Promise(r => setTimeout(r, OPT_DELAY_MS));
@@ -124,11 +138,18 @@ async function humanMoveInner(from, to, animate=true){
   clearMarks("pboard");
   snd(sndKind(m,true));
   const fenAfter = pg.fen(), ply = pg.history().length;
-  const ow = opponentWorker();
-  const sw = nnueActive ? ow : ((aux && !aux.dead) ? aux : null);
-  if(sw && !pg.game_over()){
-    const lvl = $("plevel").value, L = LEVELS[lvl];
-    spec = {fen:fenAfter, lvl, net:nnueActive, p:onW(sw, () => engineSearch(fenAfter, L.skill, L.depth, sw)).catch(() => null)};
+  const pbot = PLAY_BOT();
+  if(pbot.url && !pg.game_over()){
+    const lvl = $("plevel").value;
+    const moves = pg.history({verbose:true}).map(x => x.from + x.to + (x.promotion || ""));
+    spec = {fen:fenAfter, lvl, bot:playBotId, p:playBotSearch(fenAfter, lvl, moves).catch(() => null)};
+  } else {
+    const ow = opponentWorker();
+    const sw = nnueActive ? ow : ((aux && !aux.dead) ? aux : null);
+    if(sw && !pg.game_over()){
+      const lvl = $("plevel").value, L = LEVELS[lvl];
+      spec = {fen:fenAfter, lvl, net:nnueActive, p:onW(sw, () => engineSearch(fenAfter, L.skill, L.depth, sw)).catch(() => null)};
+    }
   }
   renderPlay(); setP("Checking your move…");
   let before = await (bp || enqueue(() => analyze(fenBeforeMove, FD)));

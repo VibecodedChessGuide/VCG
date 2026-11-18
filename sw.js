@@ -1,6 +1,6 @@
 // Cache-first store for Stockfish engine files, so each build downloads once.
 const CACHE = "chesscoach-engines-v1";
-const isEngine = u => /\/assets\/js\/[^/]*(stockfish|\.wasm$|\.nnue$)/i.test(u.pathname) || /\.(wasm|nnue)$/i.test(u.pathname);
+const isEngine = u => /\/assets\/js\/[^/]*(stockfish|\.wasm$|\.nnue$)/i.test(u.pathname) || /\/assets\/js\/bots\//i.test(u.pathname) || /\.(wasm|nnue)$/i.test(u.pathname);
 
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", e => e.waitUntil((async () => {

@@ -123,7 +123,7 @@ function getWorker(i){
 // each worker runs one job at a time
 function onW(wk, fn){ const p = wk.chain.then(fn); wk.chain = p.catch(() => {}); return p; }
 const enqueue = fn => main ? onW(main, fn) : Promise.resolve(null);
-function setSkill(wk, v){ if(wk.skill!==v){ wk.skill = v; wk.w.postMessage("setoption name Skill Level value " + v); } }
+function setSkill(wk, v){ if(v == null) return; if(wk.skill!==v){ wk.skill = v; wk.w.postMessage("setoption name Skill Level value " + v); } }
 function stopEngine(){
   engineGen++;
   for(const w of booting){ try{ w.terminate(); }catch(e){} }
@@ -137,15 +137,15 @@ function stopEngine(){
 }
 function renderBots(){
   const el = $("ebots"); if(!el) return;
-  el.innerHTML = BOTS.map(b => `<button class="botrow${b.id===botId?" sel":""}" data-bot="${b.id}"><span class="bname">${b.name}</span><small class="bsub">Open-source Stockfish build · ${(b.size/1048576).toFixed(1)} MB${b.single?" · auto single-thread fallback":""}</small></button>`).join("");
+  el.innerHTML = BOTS.map(b => `<button class="botrow${b.id===botId?" sel":""}" data-bot="${b.id}"><span class="bname">${b.name}</span><small class="bsub">Stockfish analysis engine · ${(b.size/1048576).toFixed(1)} MB${b.single?" · auto single-thread fallback":""}</small></button>`).join("");
 }
 async function selectBot(id){
   const b = BOTS.find(x => x.id === id);
   if(!b || (id === botId && engineReady)) return;
   botId = id; engineNote = ""; auxOff = false; respawnFails = 0; gameId++;
   renderBots();
-  $("esel").textContent = "Selected engine: " + b.name;
-  $("plevel").value = b.level;
+  $("esel").textContent = "Analysis engine: " + b.name;
+  if(!PLAY_BOT().url) $("plevel").value = b.level;
   $("pnew").disabled = true;
   $("esstatus").textContent = "Loading " + b.name + "…";
   $("pstatus").textContent = "Loading " + b.name + "…";
@@ -155,7 +155,10 @@ async function selectBot(id){
   pg = null; over = true; awaiting = null; fb = null; hint = null; thinking = false;
   await startEngine(engineGen);
 }
-$("plevel").onchange = () => { BOT().level = $("plevel").value; };
+$("plevel").onchange = () => {
+  const v = $("plevel").value;
+  if(PLAY_BOT().url) PLAY_BOT().level = v; else BOT().level = v;
+};
 
 function bootAux(gen){
   if(auxOff || aux) return;
@@ -251,7 +254,7 @@ function runSearch(wk, fen, depth, skill, onInfo){
   wk.lock = p.catch(() => {});
   return p;
 }
-function runSearchRaw(wk, fen, depth, skill, onInfo){
+function runSearchRaw(wk, fen, depth, skill, onInfo, posCmd){
   return new Promise(resolve => {
     if(!wk || wk.dead) return resolve(null);
     let done = false, t = 0, st = 0, stopped = false;
@@ -276,7 +279,7 @@ function runSearchRaw(wk, fen, depth, skill, onInfo){
     t = setTimeout(askStop, SEARCH_BASE_MS + depth * SEARCH_PER_DEPTH_MS);
     arm();
     setSkill(wk, skill);
-    wk.w.postMessage("position fen " + fen);
+    wk.w.postMessage(posCmd || "position fen " + fen);
     wk.w.postMessage("go depth " + depth);
   });
 }

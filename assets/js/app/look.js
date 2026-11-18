@@ -1,9 +1,10 @@
 /* ================= Look: board + pieces ================= */
 $("boardsel").innerHTML = Object.keys(BOARDS).map(k => `<option value="${k}">${BOARDS[k].name} board</option>`).join("");
 $("piecesel").innerHTML = Object.keys(PIECESETS).map(k => `<option value="${k}">${PIECESETS[k].name} pieces</option>`).join("");
-renderBots();
+renderBots(); renderPlayBots(); renderPlayBotOptions();
 $("ebots").onclick = e => { const r = e.target.closest(".botrow"); if(r) selectBot(r.dataset.bot); };
-$("boardsel").value = boardId; $("piecesel").value = pieceId; $("plevel").value = BOT().level;
+$("boardsel").value = boardId; $("piecesel").value = pieceId;
+$("plevel").value = (PLAY_BOT().url ? PLAY_BOT().level : BOT().level) || "casual";
 function preloadPieces(){
   for(const c of "wb") for(const t of "pnbrqk"){ const u = PIECE_URL(c,t), im = new Image(); im.onerror = () => imgFailUrl(u); im.src = u; }
 }
