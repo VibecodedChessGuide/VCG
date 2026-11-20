@@ -15,7 +15,7 @@
     openings.js       openings dataset + explorer
     analysis.js       background worker, move judging, predictions
     board.js          SVG board drawing, square helpers, right-click marks
-    play.js           Play mode: hints, engine moves, pointer input
+    play.js           Play mode: hints, engine moves, pointer input, sandbox (set up a position, then play it)
     friends.js        Friends mode (same device, no engine)
     review.js         Review mode
     review-links.js   chess.com link loader + compressed share links
@@ -124,10 +124,36 @@
           </label>
         </div>
         <button class="primary" id="pnew" disabled>New game</button>
-        <div class="row">
+        <div class="row gamectl">
           <button id="phint" disabled>Hint</button>
           <button id="presign" disabled>Resign</button>
           <button id="ptoggle">Threats: off</button>
+        </div>
+        <div class="row">
+          <button id="psandbox" type="button" aria-pressed="false">Sandbox</button>
+        </div>
+        <div class="sbbox hide" id="sbbox">
+          <p class="sbhelp">Tap a square to cycle: white pieces, then black pieces, then empty. Shift-tap goes back one.</p>
+          <div class="row">
+            <button id="sbclear" type="button">Clear</button>
+            <button id="sbstart" type="button">Start position</button>
+            <button id="sbflip" type="button">Flip</button>
+          </div>
+          <div class="cols">
+            <label class="field"><span>You play</span>
+              <select id="sbside" aria-label="Your side in the sandbox position">
+                <option value="w">White</option>
+                <option value="b">Black</option>
+              </select>
+            </label>
+            <label class="field"><span>Whose turn</span>
+              <select id="sbturn" aria-label="Side to move">
+                <option value="w">White to move</option>
+                <option value="b">Black to move</option>
+              </select>
+            </label>
+          </div>
+          <button class="primary" id="sbplay" type="button">Play from here</button>
         </div>
         <div class="status" id="pstatus">Loading Stockfish…</div>
         <div id="phints" class="hide" aria-live="polite"></div>

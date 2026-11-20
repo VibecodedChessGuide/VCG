@@ -4,11 +4,13 @@ let analysisBefore = null, thinking = false, awaiting = null, over = false, game
 let fb = null, hint = null, ptags = [], optMode = false;
 const OPT_DELAY_MS = 900; // Optimisation mode throttles the engine's move pace
 let hideSq = null, hoverSq = null, pendingAnim = null, spec = null;
+let gameStartFen = null; // set when the game began from a sandbox position instead of the normal start
 
 function setP(t){ $("pstatus").textContent = t; }
 const canMove = () => pg && !over && !thinking && !awaiting && pg.turn()===humanColor;
 
 function renderPlay(boardOnly){
+  if(sb){ renderSandbox(); return; }
   if(!pg) return;
   const pst = predStep("play"), pov = predOver("play");
   const fen = pst ? pst.fen : pov ? pov.fen : pg.fen();
@@ -38,11 +40,11 @@ function renderPlay(boardOnly){
   $("ptake").classList.toggle("hide", !awaiting);
   $("pcont").classList.toggle("hide", !awaiting);
   $("ptoggle").classList.toggle("hide", !!awaiting);
-  $("preview").classList.toggle("hide", !(over || (pg.history().length>=2 && !thinking)));
+  $("preview").classList.toggle("hide", !!gameStartFen || !(over || (pg.history().length>=2 && !thinking)));
   $("phint").disabled = !(pg && !over && !thinking && !awaiting && pg.turn()===humanColor);
   $("presign").disabled = over || !pg;
   drawTallyInto($("ptally"), ptags);
-  updatePlayOpen();
+  if(gameStartFen) $("popen").classList.add("hide"); else updatePlayOpen();
 }
 function setNames(){
   const lvl = $("plevel").options[$("plevel").selectedIndex].text;
@@ -51,12 +53,14 @@ function setNames(){
   $("pbot").innerHTML = `<span class="sw ${humanColor}"></span>You`;
 }
 
-async function startGame(){
+async function startGame(startFen){
   if(!engineReady) return;
+  if(sb) leaveSandboxUI();
   const id = ++gameId;
   bootAux(engineGen);
   humanColor = $("pcolor").value; pFlip = humanColor==="b";
-  pg = new Chess(); selSq = null; lastMove = null; fb = null; hint = null;
+  gameStartFen = (typeof startFen === "string") ? startFen : null; // a click event can arrive here too, so check the type
+  pg = gameStartFen ? new Chess(gameStartFen) : new Chess(); selSq = null; lastMove = null; fb = null; hint = null;
   ptags = []; awaiting = null; over = false; thinking = false; hideSq = null; hoverSq = null; pendingAnim = null;
   clearMarks("pboard"); predState.play = null; spec = null;
   setNames(); snd("start");
@@ -64,7 +68,13 @@ async function startGame(){
   renderPlay();
   if(PLAY_BOT().url) idle(() => ensurePlayBotEngine());
   else if(nnueActive) idle(() => ensureOpponentEngine());
-  if(humanColor==="b") await engineMove(id); else beginHumanTurn();
+  if(pg.turn()!==humanColor) await engineMove(id);
+  else {
+    beginHumanTurn();
+    if(gameStartFen) Promise.resolve(analysisBefore).then(a => { // show the real evaluation of a sandbox start
+      if(a && id===gameId && typeof a.cp==="number" && pg.history().length===0) setEvalBar("pevalbar", a, pFlip);
+    }).catch(() => {});
+  }
 }
 function beginHumanTurn(){
   analysisBefore = enqueue(() => analyze(pg.fen(), FD));
@@ -232,6 +242,7 @@ $("pboard").addEventListener("pointerdown", e => {
   const hadMarks = clearMarks("pboard");
   const s = sqAt(svg, e, pFlip);
   if(!s) return;
+  if(sb){ e.preventDefault(); sandboxTap(s, e.shiftKey); return; }
   if(!canMove()){ if(hadMarks && pg) renderPlay(true); return; }
   e.preventDefault();
   if(fb) fb.arrowsOn = false;
@@ -275,9 +286,124 @@ function dropEnd(e, cancel){
 }
 $("pboard").addEventListener("pointerup", e => { if(e.button===0) dropEnd(e, false); });
 $("pboard").addEventListener("pointercancel", e => dropEnd(e, true));
-attachMarks($("pboard"), () => pFlip, () => { if(pg) renderPlay(true); else paintOverlay($("pboard"), pFlip); });
+attachMarks($("pboard"), () => pFlip, () => { if(sb) renderSandbox(); else if(pg) renderPlay(true); else paintOverlay($("pboard"), pFlip); });
 
-$("pnew").onclick = startGame;
+
+/* ================= SANDBOX: set up any position, then play it =================
+   Tap a square to cycle: empty -> white P N B R Q K -> black P N B R Q K -> empty (Shift-tap goes back).
+   "Play from here" starts a normal game against the selected bot from that position. */
+let sb = null; // {board:{sq:"wp"}} while the sandbox is open
+const SB_CYCLE = ["", "wp","wn","wb","wr","wq","wk", "bp","bn","bb","br","bq","bk"];
+const PCOACH_INIT = $("pcoach").innerHTML;
+function sbFromFen(fen){
+  const b = {};
+  new Chess(fen).board().forEach((row, r) => row.forEach((c, f) => { if(c) b["abcdefgh"[f] + (8-r)] = c.color + c.type; }));
+  return b;
+}
+function sbGrid(){
+  const rows = [];
+  for(let r=0;r<8;r++){
+    const row = [];
+    for(let f=0;f<8;f++){ const v = sb.board["abcdefgh"[f] + (8-r)]; row.push(v ? {color:v[0], type:v[1]} : null); }
+    rows.push(row);
+  }
+  return rows;
+}
+function sbFen(turn){
+  let place = "";
+  for(let r=0;r<8;r++){
+    let run = 0;
+    for(let f=0;f<8;f++){
+      const v = sb.board["abcdefgh"[f] + (8-r)];
+      if(!v) run++;
+      else { if(run){ place += run; run = 0; } place += v[0]==="w" ? v[1].toUpperCase() : v[1]; }
+    }
+    if(run) place += run;
+    if(r<7) place += "/";
+  }
+  const at = (sq, v) => sb.board[sq] === v;
+  let cas = "";
+  if(at("e1","wk") && at("h1","wr")) cas += "K";
+  if(at("e1","wk") && at("a1","wr")) cas += "Q";
+  if(at("e8","bk") && at("h8","br")) cas += "k";
+  if(at("e8","bk") && at("a8","br")) cas += "q";
+  return place + " " + (turn || $("sbturn").value) + " " + (cas || "-") + " - 0 1";
+}
+function sbProblem(){
+  const vals = Object.entries(sb.board);
+  const count = v => vals.filter(([, x]) => x === v).length;
+  if(count("wk") !== 1 || count("bk") !== 1) return "Each side needs exactly one king.";
+  if(vals.some(([sq, x]) => x[1]==="p" && (sq[1]==="1" || sq[1]==="8"))) return "Pawns can't stand on the first or last rank.";
+  const g = new Chess();
+  if(!g.load(sbFen())) return "That position isn't valid. Check the kings and pawns.";
+  const other = new Chess();
+  if(other.load(sbFen($("sbturn").value==="w" ? "b" : "w")) && other.in_check()) return "The side that isn't to move is in check, which can't happen. Change whose turn it is or move a piece.";
+  if(g.game_over()) return "That position is already a finished game (checkmate, stalemate or no mating material). Change it to play.";
+  return null;
+}
+function renderSandbox(){
+  if(!sb) return;
+  drawBoard($("pboard"), "", [], [], {flip:pFlip, pieces:sbGrid()});
+  $("pfacts").textContent = ""; $("phist").textContent = "";
+  $("popen").classList.add("hide");
+  ["ptake","pcont","preview"].forEach(id => $(id).classList.add("hide"));
+  setHTML($("pcoach"), `<span class="empty">Sandbox: build any position, then tap Play from here. Pick your side and whose turn it is first.</span>`);
+}
+function sandboxTap(sq, back){
+  const cur = SB_CYCLE.indexOf(sb.board[sq] || "");
+  const nxt = SB_CYCLE[(cur + (back ? SB_CYCLE.length-1 : 1)) % SB_CYCLE.length];
+  if(nxt) sb.board[sq] = nxt; else delete sb.board[sq];
+  setP("Sandbox. Tap a square to cycle pieces.");
+  renderSandbox();
+}
+function enterSandbox(){
+  if(sb) return;
+  gameId++; spec = null; hint = null; thinking = false; selSq = null; hideSq = null; hoverSq = null;
+  endDrag(); clearMarks("pboard");
+  sb = {board: sbFromFen(pg ? pg.fen() : new Chess().fen())};
+  $("sbturn").value = pg ? pg.turn() : "w";
+  $("sbside").value = $("pcolor").value;
+  document.querySelector(".c-setup").classList.add("sbmode");
+  $("sbbox").classList.remove("hide");
+  $("psandbox").textContent = "Exit sandbox"; $("psandbox").setAttribute("aria-pressed", "true");
+  setP("Sandbox. Tap a square to cycle pieces.");
+  renderSandbox();
+}
+function leaveSandboxUI(){
+  sb = null;
+  document.querySelector(".c-setup").classList.remove("sbmode");
+  $("sbbox").classList.add("hide");
+  $("psandbox").textContent = "Sandbox"; $("psandbox").setAttribute("aria-pressed", "false");
+}
+function exitSandbox(){
+  if(!sb) return;
+  leaveSandboxUI();
+  if(!pg){
+    drawBoard($("pboard"), new Chess().fen(), [], [], {flip:pFlip});
+    setHTML($("pcoach"), PCOACH_INIT);
+    setP("Pick a bot and tap New game."); return;
+  }
+  renderPlay();
+  if(over){ setP("Game over. Tap New game to play again."); return; }
+  if(awaiting){ setP("That cost you. Take it back and try again, or continue."); return; }
+  if(pg.turn()===humanColor) beginHumanTurn(); else engineMove(gameId);
+}
+function sandboxPlay(){
+  if(!sb) return;
+  if(!engineReady){ setP("The engine is still loading. Try again in a moment."); return; }
+  const err = sbProblem();
+  if(err){ setP(err); return; }
+  const fen = sbFen(), side = $("sbside").value;
+  $("pcolor").value = side;
+  startGame(fen);
+}
+$("psandbox").onclick = () => { if(sb) exitSandbox(); else enterSandbox(); };
+$("sbclear").onclick = () => { if(sb){ sb.board = {}; renderSandbox(); } };
+$("sbstart").onclick = () => { if(sb){ sb.board = sbFromFen(new Chess().fen()); $("sbturn").value = "w"; renderSandbox(); } };
+$("sbflip").onclick = () => { if(sb){ pFlip = !pFlip; renderSandbox(); } };
+$("sbplay").onclick = sandboxPlay;
+
+$("pnew").onclick = () => startGame();
 $("ptake").onclick = takeback;
 $("pcont").onclick = continueGame;
 $("ptoggle").onclick = toggleFacts;

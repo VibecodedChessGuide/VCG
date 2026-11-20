@@ -55,6 +55,8 @@ function playBotPosition(fen, moves, b){
 function playBotSearch(fen, level, moves){
   const b = PLAY_BOT();
   if(!b || !b.url) return Promise.resolve(null);
+  // startpos-only bots cannot be given a custom (sandbox) start position, so Stockfish answers for them there
+  if(b.startpos && gameStartFen) return Promise.resolve(null);
   return ensurePlayBotEngine().then(wk => {
     if(!wk || playWkId !== b.id) return null;
     const run = () => {

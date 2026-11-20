@@ -49,7 +49,7 @@ function paintOverlay(svg, flip){
 }
 
 function drawBoard(svg, fen, arrows, hl, o={}){
-  const flip = !!o.flip, g = new Chess(fen);
+  const flip = !!o.flip, g = o.pieces ? null : new Chess(fen); // o.pieces: sandbox grid (rank 8 first), may lack kings
   const cell = (f,r) => ({x:(flip?7-f:f)*100, y:(flip?7-r:r)*100});
   const ctr = s => sqCtr(s, flip);
   const mk = marks[svg.id] || {sq:[],ar:[]};
@@ -76,7 +76,7 @@ function drawBoard(svg, fen, arrows, hl, o={}){
   }
 
   // check glow under the king
-  if(g.in_check()){
+  if(g && g.in_check()){
     g.board().forEach((row,r) => row.forEach((c,f) => {
       if(c && c.type==="k" && c.color===g.turn()){ const p = cell(f,r); s += `<circle cx="${p.x+50}" cy="${p.y+50}" r="50" fill="url(#${gid})"/>`; }
     }));
@@ -105,7 +105,7 @@ function drawBoard(svg, fen, arrows, hl, o={}){
     s += `<rect x="${p.x-47}" y="${p.y-47}" width="94" height="94" rx="7" fill="${col}" fill-opacity=".16" stroke="${col}" stroke-width="4" stroke-opacity=".9"/>`;
   });
 
-  g.board().forEach((row, r) => row.forEach((c, f) => {
+  (o.pieces || g.board()).forEach((row, r) => row.forEach((c, f) => {
     if(!c) return;
     const sq = "abcdefgh"[f] + (8-r);
     if(o.hideSq===sq) return;
