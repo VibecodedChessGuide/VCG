@@ -40,7 +40,7 @@ function renderPlay(boardOnly){
   $("ptake").classList.toggle("hide", !awaiting);
   $("pcont").classList.toggle("hide", !awaiting);
   $("ptoggle").classList.toggle("hide", !!awaiting);
-  $("preview").classList.toggle("hide", !!gameStartFen || !(over || (pg.history().length>=2 && !thinking)));
+  $("preview").classList.toggle("hide", !(over || (pg.history().length>=2 && !thinking)));
   $("phint").disabled = !(pg && !over && !thinking && !awaiting && pg.turn()===humanColor);
   $("presign").disabled = over || !pg;
   drawTallyInto($("ptally"), ptags);
