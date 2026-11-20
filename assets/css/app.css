@@ -186,6 +186,11 @@ body.cssfs .tabs+*{}
 .sbbox .row{margin-top:0}
 .sbbox .cols{margin-bottom:0}
 .sbhelp{margin:0;font-size:.754rem;line-height:1.4;color:var(--muted)}
+.sbpal{display:flex;flex-wrap:wrap;gap:.3rem}
+.sbpal button{flex:1 1 3.9rem;display:grid;justify-items:center;gap:.15rem;padding:.35rem .2rem;font-size:.7rem;border-bottom-width:3px}
+.sbpal button img{width:1.6rem;height:1.6rem;pointer-events:none}
+.sbpal .air{font-size:1.1rem;line-height:1.6rem;color:var(--muted)}
+.sbpal button.sel{border-color:var(--good);background:var(--raise)}
 #sbplay{width:100%;padding:.75rem 1rem;font-weight:800}
 .side{display:flex;flex-direction:column;gap:var(--gap);min-width:0}
 .side>.card{flex:none}

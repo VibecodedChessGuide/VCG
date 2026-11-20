@@ -290,10 +290,15 @@ attachMarks($("pboard"), () => pFlip, () => { if(sb) renderSandbox(); else if(pg
 
 
 /* ================= SANDBOX: set up any position, then play it =================
-   Tap a square to cycle: empty -> white P N B R Q K -> black P N B R Q K -> empty (Shift-tap goes back).
+   Pick a piece from the palette, then tap squares to place it. Air clears a square.
    "Play from here" starts a normal game against the selected bot from that position. */
 let sb = null; // {board:{sq:"wp"}} while the sandbox is open
-const SB_CYCLE = ["", "wp","wn","wb","wr","wq","wk", "bp","bn","bb","br","bq","bk"];
+let sbPick = "wp";
+const SB_PIECES = [
+  ["", "Air"],
+  ["wp","Pawn"],["wn","Knight"],["wb","Bishop"],["wr","Rook"],["wq","Queen"],["wk","King"],
+  ["bp","Pawn"],["bn","Knight"],["bb","Bishop"],["br","Rook"],["bq","Queen"],["bk","King"]
+];
 const PCOACH_INIT = $("pcoach").innerHTML;
 function sbFromFen(fen){
   const b = {};
@@ -334,12 +339,29 @@ function sbProblem(){
   const count = v => vals.filter(([, x]) => x === v).length;
   if(count("wk") !== 1 || count("bk") !== 1) return "Each side needs exactly one king.";
   if(vals.some(([sq, x]) => x[1]==="p" && (sq[1]==="1" || sq[1]==="8"))) return "Pawns can't stand on the first or last rank.";
+  const LIMITS = {p:8,n:10,b:10,r:10,q:9};
+  const NAMES = {p:"pawns",n:"knights",b:"bishops",r:"rooks",q:"queens"};
+  for(const c of ["w","b"]){
+    const mine = vals.filter(([, x]) => x[0]===c);
+    if(mine.length>16) return "Too many " + (c==="w"?"white":"black") + " pieces. Stockfish allows at most 16 per side.";
+    for(const [t,max] of Object.entries(LIMITS)){
+      const n = mine.filter(([, x]) => x[1]===t).length;
+      if(n>max) return "Too many " + NAMES[t] + ". Stockfish allows at most " + max + " per side.";
+    }
+  }
   const g = new Chess();
   if(!g.load(sbFen())) return "That position isn't valid. Check the kings and pawns.";
   const other = new Chess();
   if(other.load(sbFen($("sbturn").value==="w" ? "b" : "w")) && other.in_check()) return "The side that isn't to move is in check, which can't happen. Change whose turn it is or move a piece.";
   if(g.game_over()) return "That position is already a finished game (checkmate, stalemate or no mating material). Change it to play.";
   return null;
+}
+function renderSBPalette(){
+  setHTML($("sbpal"), SB_PIECES.map(([v, label]) => {
+    const name = v ? (v[0]==="w" ? "White " : "Black ") + label : "Air";
+    const icon = v ? `<img src="${PIECE_URL(v[0],v[1])}" alt="">` : `<span class="air">\u00D7</span>`;
+    return `<button type="button" data-sbpiece="${v}" title="${name}" aria-label="${name}" aria-pressed="${v===sbPick}"${v===sbPick ? ` class="sel"` : ""}>${icon}<span>${label}</span></button>`;
+  }).join(""));
 }
 function renderSandbox(){
   if(!sb) return;
@@ -349,11 +371,10 @@ function renderSandbox(){
   ["ptake","pcont","preview"].forEach(id => $(id).classList.add("hide"));
   setHTML($("pcoach"), `<span class="empty">Sandbox: build any position, then tap Play from here. Pick your side and whose turn it is first.</span>`);
 }
-function sandboxTap(sq, back){
-  const cur = SB_CYCLE.indexOf(sb.board[sq] || "");
-  const nxt = SB_CYCLE[(cur + (back ? SB_CYCLE.length-1 : 1)) % SB_CYCLE.length];
-  if(nxt) sb.board[sq] = nxt; else delete sb.board[sq];
-  setP("Sandbox. Tap a square to cycle pieces.");
+function sandboxTap(sq, erase){
+  const v = erase ? "" : sbPick;
+  if(v) sb.board[sq] = v; else delete sb.board[sq];
+  setP("Sandbox. Tap a square to place the selected piece.");
   renderSandbox();
 }
 function enterSandbox(){
@@ -366,7 +387,8 @@ function enterSandbox(){
   document.querySelector(".c-setup").classList.add("sbmode");
   $("sbbox").classList.remove("hide");
   $("psandbox").textContent = "Exit sandbox"; $("psandbox").setAttribute("aria-pressed", "true");
-  setP("Sandbox. Tap a square to cycle pieces.");
+  renderSBPalette();
+  setP("Sandbox. Tap a square to place the selected piece.");
   renderSandbox();
 }
 function leaveSandboxUI(){
@@ -398,6 +420,13 @@ function sandboxPlay(){
   startGame(fen);
 }
 $("psandbox").onclick = () => { if(sb) exitSandbox(); else enterSandbox(); };
+$("sbpal").onclick = e => {
+  const b = e.target.closest("[data-sbpiece]");
+  if(!b || !sb) return;
+  sbPick = b.dataset.sbpiece;
+  renderSBPalette();
+  setP(sbPick ? "Selected " + b.title + ". Tap a square to place it." : "Air selected. Tap a square to clear it.");
+};
 $("sbclear").onclick = () => { if(sb){ sb.board = {}; renderSandbox(); } };
 $("sbstart").onclick = () => { if(sb){ sb.board = sbFromFen(new Chess().fen()); $("sbturn").value = "w"; renderSandbox(); } };
 $("sbflip").onclick = () => { if(sb){ pFlip = !pFlip; renderSandbox(); } };

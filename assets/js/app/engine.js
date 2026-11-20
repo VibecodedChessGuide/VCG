@@ -274,6 +274,10 @@ function runSearchRaw(wk, fen, depth, skill, onInfo, posCmd){
     wk.w.onmessage = e => {
       const l = String(e.data);
       if(l.startsWith("bestmove")){ wk.warm = true; finish({best:l.split(/\s+/)[1]}); }
+      else if(/CRITICAL ERROR|Command `.*` failed|Unsupported position|Invalid FEN|King can be captured/.test(l)){
+        console.warn("[engine] position rejected: " + l);
+        finish({best:null});
+      }
       else { arm(); if(onInfo) onInfo(l); }
     };
     t = setTimeout(askStop, SEARCH_BASE_MS + depth * SEARCH_PER_DEPTH_MS);
